@@ -9,7 +9,8 @@ from trustdesk.agent.demo_model import make_model
 from trustdesk.agent.graph import build_graph
 from trustdesk.agent.runtime import sqlite_checkpointer
 from trustdesk.config import Settings
-from trustdesk.env import Env, seed
+from trustdesk.env import Env, apply_patch, seed
+from trustdesk.env.demo import DEMO_PATCH
 from trustdesk.observability.tracing import Tracer
 from trustdesk.retrieval import PolicyIndex, build_index
 
@@ -30,6 +31,8 @@ def open_store(settings: Settings, reseed: bool = False) -> Env:
     env = Env.open(settings.store_path)
     if env.one("SELECT COUNT(*) AS n FROM customers")["n"] == 0:
         seed(env)
+    if env.customer("DEMO1") is None:
+        apply_patch(env, DEMO_PATCH)
     return env
 
 

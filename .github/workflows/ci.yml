@@ -1,0 +1,21 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.26"
+      - run: uv sync --all-extras
+      - name: Lint
+        run: uv run ruff check src evals tests
+      - name: Type check (lenient)
+        run: uv run mypy src/trustdesk || true
+      - name: Tests (no network, no paid calls)
+        run: uv run pytest --cov=trustdesk --cov=evals --cov-report=term
+      - name: Task validator
+        run: uv run trustdesk eval validate

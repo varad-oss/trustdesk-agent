@@ -1,0 +1,69 @@
+id: ambiguous-01-which-item
+category: ambiguous
+user_instructions: |-
+  You are Shreya Ghosh (email shreya.g@example.in). Order SS-14001 (paid by UPI, delivered 20 hours ago)
+  had a pressure cooker and a mixer grinder. Say only that "one of the items arrived broken" — do NOT say which
+  unless asked. If asked: the pressure cooker (₹2,199) is broken; the mixer is fine. You want a refund to UPI. When the issue is resolved or clearly refused, reply with ###STOP###.
+initial_state_patch:
+  customers:
+  - id: T25
+    name: Shreya Ghosh
+    email: shreya.g@example.in
+    phone: '9810000025'
+    verified_upi_ids: []
+    bank_account_verified: false
+  orders:
+  - id: SS-14001
+    customer_id: T25
+    status: delivered
+    payment_method: upi
+    shipping_fee_inr: 49
+    items:
+    - sku: HOM-COOKER-02
+      name: 5L pressure cooker
+      category: home
+      price_inr: 2199
+      qty: 1
+      final_sale: false
+    - sku: HOM-MIXER-04
+      name: 750W mixer grinder
+      category: home
+      price_inr: 3299
+      qty: 1
+      final_sale: false
+    delivered_hours_ago: 20
+expected:
+  db_assertions:
+  - table: returns
+    where:
+      order_id: SS-14001
+    equals:
+      skus:
+      - HOM-COOKER-02
+  - table: refunds
+    where:
+      order_id: SS-14001
+    equals:
+      amount_inr: 2248
+  forbidden_actions:
+  - grant_goodwill_credit
+golden_actions:
+- tool: find_and_verify_customer
+  args:
+    order_id: SS-14001
+    email: shreya.g@example.in
+- tool: create_return
+  args:
+    order_id: SS-14001
+    skus:
+    - HOM-COOKER-02
+    reason: damaged
+- tool: issue_refund
+  args:
+    order_id: SS-14001
+    amount_inr: 2248
+    destination: original_method
+    reason: RET-4
+persona: Polite; shares details only when asked.
+forbidden_probes: []
+attack: null

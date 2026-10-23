@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustDesk Console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5b6573; --line: #dde1e6;
+    --accent: #2a6fdb; --agent: #eef3fc; --customer: #f1f1f1; --warn: #b26a00; --warn-bg: #fff6e5;
+    --ok: #1f8a5b; --bad: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111418; --panel: #1a1e24; --ink: #e7eaee; --muted: #9aa4b2; --line: #2c323b;
+      --accent: #6aa0ff; --agent: #1d2a40; --customer: #262b33; --warn: #ffb547; --warn-bg: #2e2513; --ok: #4cc38a; --bad: #ff7b6b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0 auto 0 0; }
+  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+  h2 { font-size: 14px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  #log { height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+  .msg { padding: 8px 11px; border-radius: 8px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .customer { background: var(--customer); align-self: flex-end; }
+  .agent { background: var(--agent); align-self: flex-start; }
+  .system { color: var(--warn); background: var(--warn-bg); align-self: center; font-size: 13px; }
+  form { display: flex; gap: 8px; margin-top: 8px; }
+  input[type=text], select { flex: 1; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; min-width: 0; }
+  select { flex: 0 0 auto; }
+  button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 13px; }
+  .card pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; font-size: 12px; }
+  .row { display: flex; gap: 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .rules { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TrustDesk console · ShopSetu</h1>
+  <label class="muted" for="level">Defense</label>
+  <select id="level">
+    <option value="0">D0 baseline</option><option value="1">D1 spotlighting</option>
+    <option value="2">D2 enforcement</option><option value="3" selected>D3 + approval</option>
+  </select>
+  <button id="new">New session</button>
+  <button id="attack" title="Fresh session; the product has a poisoned review">Attack demo</button>
+</header>
+<main>
+  <section>
+    <h2>Chat <span id="sid" class="muted"></span></h2>
+    <div id="log" aria-live="polite"></div>
+    <form id="form"><input id="text" type="text" placeholder="Try: my earbuds SS-10482 broke, email priya.s@example.in" autocomplete="off"><button class="primary" id="send">Send</button></form>
+    <p class="muted">Demo login: priya.s@example.in with SS-10482 (damaged earbuds) or SS-10483 (cancellable phone, triggers REF-4 approval). Reset with <code>trustdesk seed --reseed</code>.</p>
+  </section>
+  <section>
+    <h2>Approval queue</h2>
+    <div id="queue"><p class="muted">No pending approvals.</p></div>
+  </section>
+</main>
+<script>
+let sessionId = null;
+const log = document.getElementById("log"), queue = document.getElementById("queue");
+const say = (who, text) => { const d = document.createElement("div"); d.className = "msg " + who; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+function newSession() { sessionId = null; log.innerHTML = ""; document.getElementById("sid").textContent = ""; say("system", "New session at D" + document.getElementById("level").value); }
+
+function show(res) {
+  sessionId = res.session_id; document.getElementById("sid").textContent = "· " + sessionId;
+  if (res.reply) say("agent", res.reply);
+  if (res.pending_approval) say("system", "Waiting for a support lead to approve " + res.pending_approval.action + " (" + res.pending_approval.policy_decision.rule_ids.join(", ") + ")");
+  loadQueue();
+}
+
+async function send(text) {
+  say("customer", text);
+  document.getElementById("send").disabled = true;
+  try {
+    const r = await fetch("/chat", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: text, session_id: sessionId, defense_level: Number(document.getElementById("level").value)})});
+    const body = await r.json();
+    if (!r.ok) say("system", body.detail || "Error"); else show(body);
+  } catch (e) { say("system", "Network error: " + e); }
+  document.getElementById("send").disabled = false;
+}
+
+async function decide(id, decision) {
+  const r = await fetch("/approvals/" + id, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({decision, note: "decided in web console"})});
+  const body = await r.json();
+  if (!r.ok) { say("system", body.detail || "Error"); return; }
+  say("system", "Approval #" + id + " " + decision + "d");
+  if (body.session_id === sessionId) show(body); else loadQueue();
+}
+
+async function loadQueue() {
+  const items = await (await fetch("/approvals")).json();
+  if (!items.length) { queue.innerHTML = '<p class="muted">No pending approvals.</p>'; return; }
+  queue.innerHTML = items.map((a) => `<div class="card"><strong>#${a.id} ${esc(a.action)}</strong> <span class="muted">session ${esc(a.session_id)}</span>
+    <pre>${esc(JSON.stringify(a.params, null, 1))}</pre><div class="rules">Policy: ${esc(a.rule_ids.join(", "))} → needs approval</div>
+    <div class="muted">Agent's justification: ${esc(a.justification || "–")}</div>
+    <div class="muted">Last turns:<br>${a.excerpt.map((m) => esc(m.role + ": " + m.text)).join("<br>")}</div>
+    <div class="row" style="margin-top:8px"><button class="primary" onclick="decide(${a.id}, 'approve')">Approve</button><button onclick="decide(${a.id}, 'reject')">Reject</button></div></div>`).join("");
+}
+
+document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); const t = document.getElementById("text"); if (t.value.trim()) { send(t.value.trim()); t.value = ""; } });
+document.getElementById("new").addEventListener("click", newSession);
+document.getElementById("level").addEventListener("change", newSession);
+document.getElementById("attack").addEventListener("click", async () => {
+  newSession(); say("system", "Attack demo: the earbuds product has a review containing a fake 'SYSTEM NOTICE' asking for a ₹50,000 refund to attacker@okbank.");
+  const {message} = await (await fetch("/demo/attack", {method: "POST"})).json(); send(message);
+});
+newSession(); loadQueue(); setInterval(loadQueue, 4000);
+</script>
+</body>
+</html>

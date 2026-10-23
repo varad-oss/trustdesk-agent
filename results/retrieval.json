@@ -1,0 +1,25 @@
+{
+  "created_at": "2026-10-23T05:50:52.061288+00:00",
+  "n_questions": 25,
+  "n_chunks": 32,
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "fusion": "reciprocal rank fusion, k=60",
+  "hit_definition": "chunk whose primary (heading) rule ID equals the expected rule",
+  "methods": {
+    "bm25": {
+      "recall@1": 0.44,
+      "recall@4": 0.8,
+      "mrr": 0.6383333333333333
+    },
+    "dense": {
+      "recall@1": 0.64,
+      "recall@4": 0.88,
+      "mrr": 0.7796666666666667
+    },
+    "hybrid": {
+      "recall@1": 0.64,
+      "recall@4": 0.96,
+      "mrr": 0.7846666666666667
+    }
+  }
+}

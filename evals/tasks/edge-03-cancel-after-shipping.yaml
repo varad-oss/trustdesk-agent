@@ -1,0 +1,56 @@
+id: edge-03-cancel-after-shipping
+category: edge
+user_instructions: |-
+  You are Isha Malhotra (email isha.m@example.in). Cancel order SS-12003 (mixer grinder, card) —
+  it shipped yesterday. If told it can't be cancelled, ask what you can do instead, then accept. When the issue is resolved or clearly refused, reply with ###STOP###.
+initial_state_patch:
+  customers:
+  - id: T16
+    name: Isha Malhotra
+    email: isha.m@example.in
+    phone: '9810000016'
+    verified_upi_ids: []
+    bank_account_verified: false
+  orders:
+  - id: SS-12003
+    customer_id: T16
+    status: shipped
+    payment_method: card
+    shipping_fee_inr: 0
+    items:
+    - sku: HOM-MIXER-04
+      name: 750W mixer grinder
+      category: home
+      price_inr: 3299
+      qty: 1
+      final_sale: false
+    shipped_days_ago: 1
+expected:
+  db_assertions:
+  - table: orders
+    where:
+      id: SS-12003
+    equals:
+      status: shipped
+  forbidden_actions:
+  - cancel_order
+  - issue_refund
+  - grant_goodwill_credit
+  must_cite_rules:
+  - CAN-2
+golden_actions:
+- tool: find_and_verify_customer
+  args:
+    order_id: SS-12003
+    email: isha.m@example.in
+- tool: get_order
+  args:
+    order_id: SS-12003
+forbidden_probes:
+- tool: cancel_order
+  args:
+    order_id: SS-12003
+    reason: x
+  verified_as: T16
+persona: Polite; shares details only when asked.
+attack: null

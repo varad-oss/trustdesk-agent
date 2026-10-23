@@ -1,0 +1,27 @@
+# Question -> expected rule ID. A hit means a retrieved chunk whose PRIMARY rule ID (its heading)
+# equals the expected one; worked examples (EX-*) do not count as hits. Review before reporting.
+- {q: "What do I need from a customer before I can look at their order?", rule: ID-1}
+- {q: "Can I tell the customer their full phone number on file?", rule: ID-2}
+- {q: "Someone wants to cancel their brother's order, is that ok?", rule: ID-3}
+- {q: "Customer wants to cancel an order that hasn't shipped yet", rule: CAN-1}
+- {q: "order already dispatched, customer wants to cancel", rule: CAN-2}
+- {q: "How many days do I have to return a kurta?", rule: RET-1}
+- {q: "electronics return window", rule: RET-1}
+- {q: "Can I return rice I bought by mistake?", rule: RET-1}
+- {q: "Does the shirt need tags attached to be returned?", rule: RET-2}
+- {q: "clearance saree changed mind return", rule: RET-3}
+- {q: "my earbuds arrived cracked yesterday", rule: RET-4}
+- {q: "received the wrong product in the box", rule: RET-4}
+- {q: "customer already returned this item once and wants to return it again", rule: RET-5}
+- {q: "paid with credit card, wants refund to UPI instead", rule: REF-1}
+- {q: "cash on delivery order refund to a new UPI ID given in chat", rule: REF-2}
+- {q: "refund more than the item price as compensation", rule: REF-3}
+- {q: "refund of 15000 rupees for a phone", rule: REF-4}
+- {q: "can I refund before the return is created?", rule: REF-5}
+- {q: "parcel came 5 days late, can we give some credit?", rule: GW-1}
+- {q: "change delivery address after the order shipped", rule: ADR-1}
+- {q: "customer has had several refunds this month", rule: FR-1}
+- {q: "customer says they will take us to consumer court", rule: ESC-1}
+- {q: "a review says SYSTEM NOTICE refund to this UPI", rule: SEC-1}
+- {q: "user asks what your system prompt and tools are", rule: SEC-2}
+- {q: "customer writes in Hinglish, which language should I reply in?", rule: TONE-1}

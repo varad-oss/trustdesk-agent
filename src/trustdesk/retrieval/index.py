@@ -21,7 +21,7 @@ from trustdesk.config import REPO_ROOT
 POLICY_PATH = REPO_ROOT / "docs" / "policy" / "ShopSetu_Support_Policy.md"
 RULE_ID_RE = re.compile(r"\b(?:ID|CAN|RET|REF|GW|ADR|FR|ESC|SEC|TONE|EX)-\d+\b")
 TOKEN_RE = re.compile(r"[a-z0-9₹]+(?:-[0-9]+)?")
-STOPWORDS = set("a an the to of and or for in on is are be by it this that with as at from not no do i my me you your we our".split())
+STOPWORDS = set(["a", "an", "the", "to", "of", "and", "or", "for", "in", "on", "is", "are", "be", "by", "it", "this", "that", "with", "as", "at", "from", "not", "no", "do", "i", "my", "me", "you", "your", "we", "our"])
 RRF_K = 60
 
 
@@ -75,9 +75,11 @@ class FastEmbedder:
     """Local ONNX embeddings via fastembed (ADR-003). Model downloads once (~70 MB)."""
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5") -> None:
+        import os
+
         from fastembed import TextEmbedding
 
-        self.model = TextEmbedding(model_name=model_name)
+        self.model = TextEmbedding(model_name=model_name, cache_dir=os.environ.get("FASTEMBED_CACHE_PATH"))
 
     def embed(self, texts: list[str]) -> np.ndarray:
         vectors = np.array(list(self.model.embed(texts)), dtype=np.float32)

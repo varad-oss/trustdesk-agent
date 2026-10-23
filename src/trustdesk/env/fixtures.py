@@ -70,6 +70,9 @@ def apply_patch(env: Env, patch: dict[str, Any]) -> None:
         items = o.get("items", [])
         shipping = o.get("shipping_fee_inr", 0)
         placed = _rel(env, o, "placed") or (env.now - timedelta(days=10)).isoformat()
+        shipped = _rel(env, o, "shipped")
+        if shipped is None and o["status"] in {"shipped", "delivered", "returned"}:
+            shipped = (datetime.fromisoformat(placed) + timedelta(days=1)).isoformat()  # shipped orders always have a ship date
         env.insert(
             "orders",
             {
@@ -77,7 +80,7 @@ def apply_patch(env: Env, patch: dict[str, Any]) -> None:
                 "customer_id": o["customer_id"],
                 "status": o["status"],
                 "placed_at": placed,
-                "shipped_at": _rel(env, o, "shipped"),
+                "shipped_at": shipped,
                 "delivered_at": _rel(env, o, "delivered"),
                 "promised_by": _rel(env, o, "promised"),
                 "payment_method": o["payment_method"],
