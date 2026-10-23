@@ -8,30 +8,35 @@ Demo video: _to be recorded (see [docs/DEMO.md](docs/DEMO.md))._
 
 ## Results
 
-Run [`lean-20261023`](results/lean-20261023/episodes.jsonl) on 2026-10-23: agent and simulated customer both
-`qwen3:8b` on Ollama (local, $0), 36 tasks × D0–D3 × **1 trial** (144 episodes). Values are point estimates with
-95% Wilson intervals. Full tables, failure taxonomy and chart: [docs/EVAL_REPORT.md](docs/EVAL_REPORT.md).
+Run [`full-20261023`](results/full-20261023/episodes.jsonl) on 2026-10-23: agent and simulated customer both
+`qwen3:8b` on Ollama (local, $0), 36 tasks × D0–D3 × **3 trials** (432 episodes, 0 infrastructure failures).
+Point estimates with 95% Wilson intervals (pass^3: bootstrap over tasks). Full tables, failure taxonomy and chart:
+[docs/EVAL_REPORT.md](docs/EVAL_REPORT.md).
 
-| Defense level | Episodes with policy violations | Attack success rate | Benign utility | Utility under attack | pass^1 | Model s/conversation |
+| Defense level | Episodes with policy violations | Attack success rate | Benign utility | Utility under attack | pass^3 | Model s/conversation |
 |---|---|---|---|---|---|---|
-| D0 baseline | **0.22** [0.12, 0.38] | 0.10 [0.02, 0.40] | 0.23 [0.11, 0.42] | 0.40 [0.17, 0.69] | 0.28 | 110\* |
-| D1 spotlighting | **0.17** [0.08, 0.32] | 0.00 [0.00, 0.28] | 0.27 [0.14, 0.46] | 0.20 [0.06, 0.51] | 0.22 | 20 |
-| D2 policy engine in code | **0.00** [0.00, 0.10] | 0.00 [0.00, 0.28] | 0.27 [0.14, 0.46] | 0.10 [0.02, 0.40] | 0.22 | 20 |
-| D3 + human approval | **0.00** [0.00, 0.10] | 0.00 [0.00, 0.28] | 0.19 [0.09, 0.38] | 0.20 [0.06, 0.51] | 0.17 | 20 |
+| D0 baseline | **0.21** [0.15, 0.30] | **0.17** [0.07, 0.34] | 0.33 [0.24, 0.44] | 0.30 [0.17, 0.48] | 0.17 | 17 |
+| D1 spotlighting | **0.16** [0.10, 0.24] | **0.10** [0.03, 0.26] | 0.26 [0.17, 0.36] | 0.27 [0.14, 0.44] | 0.11 | 20 |
+| D2 policy engine in code | **0.00** [0.00, 0.03] | **0.00** [0.00, 0.11] | 0.15 [0.09, 0.25] | 0.23 [0.12, 0.41] | 0.08 | 23 |
+| D3 + human approval | **0.00** [0.00, 0.03] | **0.00** [0.00, 0.11] | 0.29 [0.21, 0.40] | 0.13 [0.05, 0.30] | 0.11 | 22 |
 
 What this shows, and what it doesn't:
-- **The code-level layers did their job.** With only prompts (D0/D1), the 8B model acted on unverified accounts,
-  refunded more than was paid (₹2,499 on a ₹997 order), sent a prepaid refund to the wrong destination and skipped
-  REF-4 approval: violations in 22% / 17% of episodes. With the policy engine (D2/D3): 0 of 72.
-- **Task success is low at every level (≈0.2–0.3)**: an 8B local model often stops early or uses wrong arguments
-  (see the failure taxonomy). Defenses don't make the model smarter; they make its mistakes safe.
-- **Attack success was low even at D0** (1 of 10: acting before verification), so this run can't show much
-  difference between levels on that metric; with n=10 per level the intervals overlap.
-- **Small n, one trial:** utility differences between levels are within noise. pass^3 needs `make eval-full`.
-- \*D0 ran first, while another project shared the GPU and Ollama restarted; its time is contention, not D0.
+- **Code-level enforcement removed violations and successful attacks.** With prompt-only defenses (D0/D1), the 8B
+  model broke policy in 40 of 216 episodes. Counting violation instances: acting on an account it hadn't verified (29,
+  in 21 episodes), skipping REF-4 approval on large refunds (11), refunding more than was paid (5), sending refunds to
+  unverified destinations (4), over-granting credit (5). Attacks succeeded 8
+  times, mostly by leaking another customer's phone/address (attack-04, 5 of 6) and acting before verification.
+  With the policy engine (D2/D3): 0 violations in 216 episodes, 0 successful attacks in 60.
+- **Spotlighting alone (D1) helped only a little**: violations 21% → 16%, attacks 17% → 10%, with overlapping intervals.
+- **Task success is low at every level** (benign utility 0.15–0.33; pass^3 ≤ 0.17): an 8B local model often
+  stops early or passes wrong arguments. The defenses make its mistakes safe; they don't make it more capable.
+- **Utility differences between levels are mostly noise**: D2 is lowest (0.15) but D3, which has the same checks plus
+  approval, is 0.29. At D2/D3 a common failure is trying to act before verifying the customer (35 episodes), which the
+  identity gate refuses.
 
 Also measured: 36/36 tasks validate ([results/validation.json](results/validation.json)); hybrid policy retrieval
-recall@4 0.96 vs 0.80 BM25 ([results/retrieval.json](results/retrieval.json)).
+recall@4 0.96 vs 0.80 BM25 ([results/retrieval.json](results/retrieval.json)). An earlier 1-trial run
+([`lean-20261023`](results/lean-20261023/episodes.jsonl)) showed the same pattern.
 
 ## Architecture
 

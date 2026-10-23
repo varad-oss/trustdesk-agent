@@ -13,25 +13,12 @@ fastembed for embeddings, JSONL traces. No API keys or paid services anywhere.
 - `make report`: regenerates docs/EVAL_REPORT.md from those files.
 - `docker compose up`: verified with the rule-based demo model; the default now talks to the host's Ollama.
 
-## Full run in progress (`full-20261023`, detached)
-
-Running in a `screen` session that survives closing Claude, with `caffeinate` keeping the Mac awake
-(keep the lid open and the charger in). When it finishes it writes `docs/EVAL_REPORT.md` automatically.
-
-- Progress bar: `make progress RUN=full-20261023` (in any terminal, from the P1 folder; Ctrl-C closes only the view)
-- Raw log: `tail -f data/eval-full-20261023.log` · attach: `screen -r trustdesk-eval` (detach: Ctrl-A then D)
-- Is it running? `screen -list` shows `trustdesk-eval` while it runs
-- Done when the log ends with `eval exited with status 0` and `Wrote docs/EVAL_REPORT.md`
-- If it stopped early (e.g. Ollama died): `make eval-detached RUN=full-20261023 LEVELS=0,1,2,3 TRIALS=3` resumes it
-- Report by hand: `make report`
-- Afterwards: update the README results table from docs/EVAL_REPORT.md (pass^3 is now available) and commit
+- `make eval-full`: reported run `full-20261023` (432 episodes, 3 trials) — README table and EVAL_REPORT.
+  Re-run detached any time: `make eval-detached RUN=<id> LEVELS=0,1,2,3 TRIALS=3`; watch with `make progress RUN=<id>`.
 
 ## Waiting on Varad
 
-1. **Full ablation (free):** `make eval-lean` is done; next `make eval-full`
-   (× 3 trials, for pass^3). Both start with a pilot that prints the measured seconds/episode and the estimated
-   wall-clock time and ask before continuing. Run them when no other project is using Ollama (`ollama ps`).
-   Then `make eval-rubber-stamp` and `make report`.
+1. **Rubber-stamp run (free, ~20 min):** `make eval-rubber-stamp`, then `make report`, when Ollama is free.
 2. **Review the tasks** in `evals/tasks/` and the 25 retrieval questions in `evals/retrieval_qa.yaml`.
 3. **Hand-label 10 simulator transcripts** from the run (report the n). Optional: a second local model family for the
    simulator (`ollama pull llama3.2:3b`, `TRUSTDESK_SIM_MODEL=llama3.2:3b`) to reduce correlated errors.
