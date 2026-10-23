@@ -1,6 +1,6 @@
 # TrustDesk
 
-[![CI](https://github.com/<you>/trustdesk/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/varad-oss/trustdesk-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/varad-oss/trustdesk-agent/actions/workflows/ci.yml)
 
 **A customer-support agent that can refund, cancel and re-route orders, but can't break policy, even when it is wrong or being manipulated. It asks a human before risky actions, and its prompt-injection defenses are measured, not just claimed.**
 
@@ -62,7 +62,7 @@ D0–D3 switch these layers on one by one so the eval harness can measure what e
 ## Quickstart (free: no API keys, no paid services)
 
 ```bash
-git clone <repo> && cd trustdesk
+git clone https://github.com/varad-oss/trustdesk-agent.git && cd trustdesk-agent
 docker compose up --build
 ```
 
@@ -94,4 +94,4 @@ an LLM judge.
 
 ## How it was built
 
-Implemented with Claude Code as a pair programmer; task design, evaluation design, red-teaming and analysis by me.
+Implemented with Claude Code as a pair programmer, from my specification and under my direction. Manual red-teaming is in progress in [docs/RED_TEAM_LOG.md](docs/RED_TEAM_LOG.md).
