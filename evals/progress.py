@@ -15,9 +15,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from trustdesk.config import REPO_ROOT
-
-RESULTS = REPO_ROOT / "results"
+# Standard library only (no trustdesk imports), so this viewer stays at a few MB of memory.
+RESULTS = Path(__file__).resolve().parents[1] / "results"
 RECENT = 10  # episodes used for the speed estimate (recent pace beats the all-time average)
 
 
@@ -97,3 +96,9 @@ def watch(run_id: str, interval: float = 5.0) -> None:
             time.sleep(interval)
     except KeyboardInterrupt:
         print()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("usage: python evals/progress.py RUN_ID [interval_seconds]")
+    watch(sys.argv[1], float(sys.argv[2]) if len(sys.argv) > 2 else 5.0)

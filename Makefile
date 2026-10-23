@@ -65,7 +65,7 @@ eval-rubber-stamp:
 
 # Live progress view for a running eval: make progress RUN=lean-20261023
 progress:
-	uv run --no-sync trustdesk eval progress $(RUN)
+	python3 evals/progress.py $(RUN)
 
 report:
 	uv run trustdesk eval report
