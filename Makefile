@@ -1,5 +1,5 @@
 # TrustDesk developer commands. Every number in docs comes from a target here.
-.PHONY: ollama-pull install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-lean eval-rubber-stamp report docker-up
+.PHONY: ollama-pull install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-lean eval-resume eval-rubber-stamp report docker-up
 
 install:
 	uv sync --all-extras
@@ -54,6 +54,10 @@ eval-full:
 # Same ablation with 1 trial (144 episodes): pass^1 only, a faster first look
 eval-lean:
 	uv run trustdesk eval run --levels 0,1,2,3 --trials 1 --concurrency 1 --reported --run-id lean-$$(date +%Y%m%d)
+
+# Continue an interrupted run (keeps cleanly finished episodes): make eval-resume RUN=lean-20261023 LEVELS=0,1,2,3 TRIALS=1
+eval-resume:
+	uv run trustdesk eval run --levels $(LEVELS) --trials $(TRIALS) --concurrency 1 --reported --run-id $(RUN) --resume
 
 # Defense in depth: approve everything at D3 and show the policy engine still blocks attacks
 eval-rubber-stamp:

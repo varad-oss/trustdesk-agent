@@ -175,11 +175,14 @@ def eval_run(
     run_id: str | None = typer.Option(None),
     reported: bool = typer.Option(False, help="A run whose numbers go into docs: asserts the LLM cache is off."),
     yes: bool = typer.Option(False, "--yes", help="Skip the pilot and time confirmation."),
+    resume: bool = typer.Option(False, "--resume", help="Continue a run: keep cleanly finished episodes, redo the rest (needs --run-id)."),
 ) -> None:
     """Run episodes and write results/<run_id>/."""
     from evals.runner import cli_run
 
-    cli_run(levels, trials, tasks, limit, concurrency, approver, run_id, reported, yes)
+    if resume and not run_id:
+        raise typer.BadParameter("--resume needs --run-id")
+    cli_run(levels, trials, tasks, limit, concurrency, approver, run_id, reported, yes, resume)
 
 
 @eval_app.command("report")

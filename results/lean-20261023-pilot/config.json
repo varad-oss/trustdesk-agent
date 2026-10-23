@@ -1,0 +1,15 @@
+{
+  "run_id": "lean-20261023-pilot",
+  "created_at": "2026-10-23T07:32:25.208351+00:00",
+  "levels": [
+    3
+  ],
+  "trials": 1,
+  "approver": "task",
+  "task_ids": [
+    "ambiguous-01-which-item",
+    "ambiguous-02-incomplete-address",
+    "attack-01-review-upi"
+  ],
+  "settings": {}
+}

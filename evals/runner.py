@@ -34,8 +34,38 @@ from trustdesk.observability.tracing import Tracer
 from trustdesk.retrieval import build_index
 
 RESULTS_DIR = REPO_ROOT / "results"
+MAX_CONSECUTIVE_INFRA_FAILURES = 3  # e.g. the model server died: stop instead of failing every remaining episode
 CONFIRM_IF_LONGER_THAN_MIN = 20  # local models are free but slow: confirm long runs after a pilot
 INFRA_MODULES = ("httpx", "httpcore")
+
+
+class ModelServerDown(RuntimeError):
+    """Raised when episodes keep failing on infrastructure; finished episodes stay on disk."""
+
+
+def check_model_server(settings: Settings) -> str | None:
+    """Return a problem description if the configured local model server can't serve the run."""
+    import httpx
+
+    for provider, model in ((settings.provider, settings.model), (settings.simulator_provider, settings.simulator_model)):
+        if provider != "ollama":
+            continue
+        try:
+            tags = httpx.get(f"{settings.ollama_base_url}/api/tags", timeout=5).json()
+        except httpx.HTTPError as exc:
+            return f"Ollama is not reachable at {settings.ollama_base_url} ({type(exc).__name__}). Start it with `ollama serve`."
+        if not any(m["name"] == model for m in tags.get("models", [])):
+            return f"Model {model} is not pulled in Ollama. Run `ollama pull {model}`."
+    return None
+
+
+def completed_episodes(out_dir: Path) -> list[dict[str, Any]]:
+    """Episodes already finished cleanly (graded, no error) in a previous attempt of this run."""
+    path = out_dir / "episodes.jsonl"
+    if not path.exists():
+        return []
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [r for r in rows if "grade" in r and not r.get("error")]
 
 
 @dataclass
@@ -46,6 +76,7 @@ class RunConfig:
     approver: str = "task"  # task | rubber_stamp
     concurrency: int = 4
     max_attempts: int = 3
+    resume: bool = False
 
 
 def _is_infra_error(exc: BaseException) -> bool:
@@ -190,11 +221,20 @@ def run(
 ) -> Path:
     out_dir = RESULTS_DIR / config.run_id
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "config.json").write_text(
+    done: set[str] = set()
+    if config.resume:
+        kept = completed_episodes(out_dir)
+        done = {r["episode_id"] for r in kept}
+        # Drop failed attempts so the report counts each episode once; they are re-run below.
+        (out_dir / "episodes.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False, default=str) + "\n" for r in kept))
+        print(f"Resuming {config.run_id}: {len(done)} episodes already done.")
+    config_path = out_dir / "config.json"
+    created_at = json.loads(config_path.read_text())["created_at"] if config.resume and config_path.exists() else datetime.now(UTC).isoformat()
+    config_path.write_text(
         json.dumps(
             {
                 "run_id": config.run_id,
-                "created_at": datetime.now(UTC).isoformat(),
+                "created_at": created_at,
                 "levels": config.levels,
                 "trials": config.trials,
                 "approver": config.approver,
@@ -205,7 +245,8 @@ def run(
             default=str,
         )
     )
-    jobs = [(t, lvl, k) for lvl in config.levels for t in tasks for k in range(1, config.trials + 1)]
+    jobs = [(t, lvl, k) for lvl in config.levels for t in tasks for k in range(1, config.trials + 1) if f"{t.id}__D{lvl}__t{k}" not in done]
+    infra_streak = 0
     with ThreadPoolExecutor(max_workers=config.concurrency) as pool, open(out_dir / "episodes.jsonl", "a", encoding="utf-8") as sink:
         futures = {
             pool.submit(
@@ -222,7 +263,15 @@ def run(
             sink.flush()
             g = rec.get("grade", {})
             print(f"[{i}/{len(jobs)}] {rec['episode_id']}: success={g.get('success')} attack={g.get('attack_success')} "
-                  f"{rec.get('latency_s', 0):.0f}s {rec.get('error') or ''}")
+                  f"{rec.get('latency_s', 0):.0f}s {rec.get('error') or ''}", flush=True)
+            infra_streak = infra_streak + 1 if rec.get("infra_failed") else 0
+            if infra_streak >= MAX_CONSECUTIVE_INFRA_FAILURES:
+                for pending in futures:
+                    pending.cancel()
+                raise ModelServerDown(
+                    f"{infra_streak} episodes in a row failed on infrastructure (last: {rec.get('error')}). "
+                    f"Fix the model server, then rerun with --resume --run-id {config.run_id}."
+                )
     return out_dir
 
 
@@ -236,10 +285,15 @@ def cli_run(
     run_id: str | None,
     reported: bool,
     yes: bool,
+    resume: bool = False,
 ) -> None:
     import typer
 
     settings: Settings = load_settings()
+    problem = check_model_server(settings)
+    if problem:
+        typer.secho(problem, fg="red")
+        raise typer.Exit(1)
     if reported and settings.llm_cache_dir is not None:
         raise typer.BadParameter("Reported runs must not use the LLM cache: unset TRUSTDESK_LLM_CACHE_DIR.")
     tasks = load_tasks(task_ids.split(",") if task_ids else None)[:limit]
@@ -248,7 +302,7 @@ def cli_run(
     run_id = run_id or f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{settings.provider}"
     n_episodes = len(tasks) * len(level_list) * trials
     uses_model = settings.provider != "fake" or settings.simulator_provider != "fake"
-    if uses_model and n_episodes > 6 and not yes:
+    if uses_model and n_episodes > 6 and not yes and not resume:
         pilot_tasks = tasks[:3]
         typer.echo(f"Pilot: {len(pilot_tasks)} episodes at D{max(level_list)} before the full run of {n_episodes} episodes...")
         pilot_dir = run(pilot_tasks, RunConfig(f"{run_id}-pilot", [max(level_list)], 1, approver, concurrency),
@@ -261,7 +315,7 @@ def cli_run(
         if minutes > CONFIRM_IF_LONGER_THAN_MIN and not typer.confirm("Proceed with the full run?"):
             raise typer.Exit()
     snapshot = settings.model_dump()
-    out = run(tasks, RunConfig(run_id, level_list, trials, approver, concurrency),
+    out = run(tasks, RunConfig(run_id, level_list, trials, approver, concurrency, resume=resume),
               lambda: make_model(settings, "agent"), lambda: make_model(settings, "simulator"), retriever,
               {**snapshot, "reported": reported, "retrieval_mode_effective": retriever.mode})
     typer.echo(f"Results in {out.relative_to(REPO_ROOT)}. Run `trustdesk eval report --run-id {run_id}`.")

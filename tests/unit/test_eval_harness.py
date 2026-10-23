@@ -134,3 +134,38 @@ def test_rubber_stamp_approver():
     assert runner_mod.approver_decision(task, "task") == "reject"
     assert runner_mod.approver_decision(task, "rubber_stamp") == "approve"
     assert BASE_PATCH  # fixture module imported for shared helpers
+
+
+def test_runner_stops_when_model_server_dies_and_resumes(tmp_path, monkeypatch):
+    import httpx
+    import pytest
+
+    monkeypatch.setattr(runner_mod, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(runner_mod.time, "sleep", lambda s: None)
+    tasks = load_tasks()[:6]
+
+    class Down:
+        name = "fake"
+
+        def complete(self, *a):
+            raise httpx.ConnectError("Connection refused")
+
+    sim = lambda: ScriptedModel([[{"type": "text", "text": "hi ###STOP###"}]])  # noqa: E731
+    with pytest.raises(runner_mod.ModelServerDown):
+        runner_mod.run(tasks, runner_mod.RunConfig("r1", [2], 1), Down, sim, PolicyIndex.from_policy())
+    rows = (tmp_path / "r1" / "episodes.jsonl").read_text().splitlines()
+    assert len(rows) == runner_mod.MAX_CONSECUTIVE_INFRA_FAILURES  # stopped early, not 6 failures
+
+    out = runner_mod.run(tasks, runner_mod.RunConfig("r1", [2], 1, resume=True), RuleBasedDemoModel, sim, PolicyIndex.from_policy())
+    recs = [json.loads(line) for line in (out / "episodes.jsonl").read_text().splitlines()]
+    assert len(recs) == 6 and all(not r.get("error") for r in recs)
+    again = runner_mod.run(tasks, runner_mod.RunConfig("r1", [2], 1, resume=True), Down, sim, PolicyIndex.from_policy())
+    assert len((again / "episodes.jsonl").read_text().splitlines()) == 6  # nothing re-run
+
+
+def test_preflight_reports_unreachable_ollama():
+    from trustdesk.config import Settings
+
+    msg = runner_mod.check_model_server(Settings(ollama_base_url="http://127.0.0.1:9"))
+    assert msg and "not reachable" in msg
+    assert runner_mod.check_model_server(Settings(provider="fake", simulator_provider="fake")) is None
