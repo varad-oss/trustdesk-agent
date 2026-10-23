@@ -1,8 +1,9 @@
 """Model adapters behind one interface (`ChatModel.complete`).
 
-Messages and content blocks use the Anthropic Messages format internally (dicts), so
-thinking blocks round-trip byte-for-byte. Adapters for other providers translate at
-the edge. Switching provider is a config change (`TRUSTDESK_PROVIDER`), not a code change.
+Everything runs locally and for free. Internally, messages use one provider-neutral shape:
+content blocks (`text`, `tool_use`, `tool_result`) in the widely used Messages layout. Each
+adapter translates at the edge, so switching between Ollama, another local OpenAI-compatible
+server, or the offline fakes is a config change (`TRUSTDESK_PROVIDER`), not a code change.
 
 This module deliberately has no TrustDesk-specific imports so HopScout / PatchLoop can
 copy it.
@@ -12,7 +13,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,68 +46,109 @@ class ChatModel(Protocol):
     def complete(self, system: str, tools: list[dict[str, Any]], messages: list[dict[str, Any]]) -> ModelResponse: ...
 
 
-# --- Anthropic ------------------------------------------------------------------------------
-class AnthropicModel:
-    """Claude via the official SDK.
+# --- Ollama (local, free) -----------------------------------------------------------------------
+THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
-    Rules for Claude Haiku 5.5 (Anthropic migration guide): no temperature/top_p/top_k;
-    no assistant prefill (we always end on a user turn); adaptive thinking with
-    `output_config.effort`; read content blocks by `type`; pass thinking blocks back
-    unchanged; handle `stop_reason == "refusal"`. Automatic prompt caching caches the
-    constant tools+system prefix and the growing conversation.
+
+class OllamaModel:
+    """A local model served by Ollama, via its native `/api/chat` endpoint.
+
+    Why native and not Ollama's OpenAI-compatible endpoint: only the native API lets us set
+    `num_ctx` (Ollama's default context is too small for our prompt + 12 tool schemas, and
+    overflow is silently truncated from the front) and switch "thinking" off per request.
+    No temperature is set: we use the model's default sampling, and measure variance with
+    repeated trials instead of hiding it.
     """
 
-    def __init__(self, model: str = "claude-haiku-5-5", effort: str = "low", max_tokens: int = 8000, timeout_s: float = 90.0) -> None:
-        import anthropic
+    def __init__(self, model: str = "qwen3:8b", base_url: str = "http://localhost:11434", num_ctx: int = 16384,
+                 think: bool = False, timeout_s: float = 600.0) -> None:
+        import httpx
 
         self.name = model
-        self.effort = effort
-        self.max_tokens = max_tokens
-        self.client = anthropic.Anthropic(timeout=timeout_s, max_retries=4)  # SDK retries 408/409/429/5xx with backoff
+        self.base_url = base_url.rstrip("/").removesuffix("/v1")
+        self.num_ctx = num_ctx
+        self.think = think
+        self.http = httpx.Client(timeout=timeout_s)
+
+    @staticmethod
+    def to_ollama(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Anthropic-style content blocks -> Ollama chat messages (thinking blocks are dropped)."""
+        out: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        names: dict[str, str] = {}
+        for m in messages:
+            content = m["content"]
+            if isinstance(content, str):
+                out.append({"role": m["role"], "content": content})
+                continue
+            if m["role"] == "assistant":
+                calls = []
+                for b in content:
+                    if b["type"] == "tool_use":
+                        names[b["id"]] = b["name"]
+                        calls.append({"function": {"name": b["name"], "arguments": b["input"]}})
+                msg: dict[str, Any] = {"role": "assistant", "content": "".join(b.get("text", "") for b in content if b["type"] == "text")}
+                if calls:
+                    msg["tool_calls"] = calls
+                out.append(msg)
+            else:
+                for b in content:
+                    if b["type"] == "tool_result":
+                        out.append({"role": "tool", "content": b["content"], "tool_name": names.get(b["tool_use_id"], "")})
+                    elif b["type"] == "text":
+                        out.append({"role": "user", "content": b["text"]})
+        return out
 
     def complete(self, system: str, tools: list[dict[str, Any]], messages: list[dict[str, Any]]) -> ModelResponse:
-        kwargs: dict[str, Any] = {
+        body: dict[str, Any] = {
             "model": self.name,
-            "max_tokens": self.max_tokens,
-            "system": system,
-            "messages": messages,
-            "thinking": {"type": "adaptive"},
-            "output_config": {"effort": self.effort},
-            "cache_control": {"type": "ephemeral"},
+            "messages": self.to_ollama(system, messages),
+            "stream": False,
+            "think": self.think,
+            "options": {"num_ctx": self.num_ctx},
         }
         if tools:
-            kwargs["tools"] = tools
+            body["tools"] = [
+                {"type": "function", "function": {"name": t["name"], "description": t["description"], "parameters": t["input_schema"]}}
+                for t in tools
+            ]
         start = time.perf_counter()
-        resp = self.client.messages.create(**kwargs)
-        latency = time.perf_counter() - start
-        u = resp.usage
-        usage = {
-            "input_tokens": u.input_tokens,
-            "output_tokens": u.output_tokens,
-            "cache_read_input_tokens": u.cache_read_input_tokens or 0,
-            "cache_creation_input_tokens": u.cache_creation_input_tokens or 0,
-            "thinking_tokens": (u.output_tokens_details.thinking_tokens or 0) if u.output_tokens_details else 0,
-        }
+        resp = self.http.post(f"{self.base_url}/api/chat", json=body)
+        resp.raise_for_status()
+        data = resp.json()
+        msg = data.get("message", {})
+        content: list[dict[str, Any]] = []
+        text = THINK_RE.sub("", msg.get("content") or "").strip()
+        if text:
+            content.append({"type": "text", "text": text})
+        for call in msg.get("tool_calls") or []:
+            args = call["function"].get("arguments") or {}
+            if isinstance(args, str):
+                args = json.loads(args or "{}")
+            content.append({"type": "tool_use", "id": f"toolu_{uuid.uuid4().hex[:16]}", "name": call["function"]["name"], "input": args})
+        thinking = msg.get("thinking") or ""
         return ModelResponse(
-            content=[b.model_dump(exclude_none=True) for b in resp.content],
-            stop_reason=resp.stop_reason or "end_turn",
-            model=resp.model,
-            usage=usage,
-            latency_s=latency,
-            request_id=getattr(resp, "_request_id", None),
+            content=content,
+            stop_reason="tool_use" if msg.get("tool_calls") else ("max_tokens" if data.get("done_reason") == "length" else "end_turn"),
+            model=self.name,
+            usage={
+                "input_tokens": data.get("prompt_eval_count", 0),
+                "output_tokens": data.get("eval_count", 0),
+                "thinking_tokens": len(thinking) // 4,  # Ollama doesn't split counts; rough estimate
+            },
+            latency_s=time.perf_counter() - start,
         )
 
 
-# --- OpenAI-compatible (Ollama, vLLM, free tiers) ---------------------------------------------
+# --- OpenAI-compatible (llama.cpp server, LM Studio, vLLM: any local server) --------------------
 class OpenAICompatModel:
-    """Any `/chat/completions` endpoint with function calling, for cheap development runs."""
+    """Any local `/chat/completions` server with function calling (llama.cpp, LM Studio, vLLM)."""
 
-    def __init__(self, model: str, base_url: str, api_key: str = "", timeout_s: float = 120.0) -> None:
+    def __init__(self, model: str, base_url: str, timeout_s: float = 600.0) -> None:
         import httpx
 
         self.name = model
         self.base_url = base_url.rstrip("/")
-        self.http = httpx.Client(timeout=timeout_s, headers={"Authorization": f"Bearer {api_key}"} if api_key else {})
+        self.http = httpx.Client(timeout=timeout_s)
 
     @staticmethod
     def to_openai(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:

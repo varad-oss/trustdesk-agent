@@ -14,8 +14,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY evals ./evals
 COPY docs/policy ./docs/policy
-COPY config ./config
-RUN uv sync --frozen --no-dev --extra langfuse
+RUN uv sync --frozen --no-dev
 
 # Bake the small embedding model into the image so hybrid retrieval works offline.
 RUN uv run python -c "from trustdesk.retrieval.index import FastEmbedder; FastEmbedder()"

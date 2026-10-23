@@ -1,7 +1,7 @@
 """System prompts. Built once per conversation and never changed inside it.
 
-The prompt is constant per defense level, so (a) thinking blocks stay valid when replayed
-and (b) the tools+system prefix is cacheable. Nothing volatile (dates, IDs) goes here.
+The prompt is constant per defense level, so the tools+system prefix stays byte-identical and the
+inference server can reuse its cache across turns. Nothing volatile (dates, IDs) goes here.
 """
 
 from __future__ import annotations

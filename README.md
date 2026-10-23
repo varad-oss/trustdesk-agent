@@ -8,7 +8,7 @@ Demo video: _to be recorded (see [docs/DEMO.md](docs/DEMO.md))._
 
 ## Results
 
-| Defense level | Benign utility | Utility under attack | Attack success rate | pass^3 | $/conversation |
+| Defense level | Benign utility | Utility under attack | Attack success rate | pass^3 | Model s/conversation |
 |---|---|---|---|---|---|
 | D0 baseline | _not yet measured_ | | | | |
 | D1 spotlighting | _not yet measured_ | | | | |
@@ -25,7 +25,7 @@ writes the numbers, with dates, model, task count, trials and 95% intervals, int
 
 ```mermaid
 flowchart LR
-  C[Customer] --> G[LangGraph agent<br/>Claude Haiku 5.5]
+  C[Customer] --> G[LangGraph agent<br/>qwen3:8b on Ollama, local]
   G -->|tool calls| T[12 typed tools]
   T --> PE[Deterministic<br/>policy engine]
   PE --> DB[(ShopSetu SQLite)]
@@ -42,7 +42,7 @@ human decides. Text from reviews, delivery notes and old tickets is wrapped and 
 D0–D3 switch these layers on one by one so the eval harness can measure what each buys. More:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Quickstart (no API key needed)
+## Quickstart (free: no API keys, no paid services)
 
 ```bash
 git clone <repo> && cd trustdesk
@@ -50,9 +50,9 @@ docker compose up --build
 ```
 
 Open http://localhost:8000, log in as `priya.s@example.in` with order `SS-10482`, or press **Attack demo**.
-Without a key the rule-based demo model runs (it is not an LLM). With uv instead of Docker: `make install && make chat-fake`.
+With uv instead of Docker: `make install && make chat`. Everything runs on your machine at $0.
 
-With a model: copy `.env.example` to `.env`, set `ANTHROPIC_API_KEY`, then `make chat` or `make serve`.
+With the local LLM: install [Ollama](https://ollama.com), run `make ollama-pull` (qwen3:8b, ~5 GB), then `make chat` or `make serve`. `docker compose up` talks to the Ollama on your machine; `TRUSTDESK_PROVIDER=fake docker compose up` runs without it.
 
 ## Evaluating
 
@@ -60,8 +60,9 @@ With a model: copy `.env.example` to `.env`, set `ANTHROPIC_API_KEY`, then `make
 make test            # offline unit + integration tests
 make validate        # golden replay of every task through the real graph (no model calls)
 make eval-retrieval  # recall@1/@4, MRR for BM25, dense, hybrid
-make eval-smoke      # 3 tasks x D0, D2 with the real model
-make eval-full       # 36 tasks x D0-D3 x 3 trials; pilot first, asks before spending
+make eval-smoke      # 3 tasks x D0, D2 with the local model
+make eval-lean       # 36 tasks x D0-D3 x 1 trial
+make eval-full       # 36 tasks x D0-D3 x 3 trials; pilot estimates hours first
 make report          # regenerates docs/EVAL_REPORT.md and charts from results/
 ```
 
@@ -70,9 +71,9 @@ an LLM judge.
 
 ## Design decisions and limitations
 
-- Decisions: [docs/DECISIONS.md](docs/DECISIONS.md) — LangGraph (ADR-001), Claude Haiku 5.5 through a custom model node (ADR-002), BM25 + bge-small + RRF (ADR-003), and deviations from the spec (ADR-007).
+- Decisions: [docs/DECISIONS.md](docs/DECISIONS.md) — LangGraph (ADR-001), local qwen3:8b on Ollama through a custom model node (ADR-002), free-only (ADR-009), BM25 + bge-small + RRF (ADR-003), and deviations from the spec (ADR-007).
 - Threat model: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) — OWASP agentic + LLM top-10 mapping, lethal-trifecta analysis.
-- Limitations: synthetic store and policy; static attack suite (adaptive attacks go in [docs/RED_TEAM_LOG.md](docs/RED_TEAM_LOG.md)); LLM-simulated customers add variance; small n (36 tasks); Langfuse integration not yet exercised live.
+- Limitations: synthetic store and policy; static attack suite (adaptive attacks go in [docs/RED_TEAM_LOG.md](docs/RED_TEAM_LOG.md)); LLM-simulated customers add variance; small n (36 tasks); an 8B local model (simulator from the same family); Langfuse integration (self-hosted) not yet exercised live.
 
 ## How it was built
 

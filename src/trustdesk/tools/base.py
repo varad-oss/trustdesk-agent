@@ -47,6 +47,7 @@ def denial(decision: Decision) -> dict[str, Any]:
     hint = (
         "Ask for the registered email or phone and an order ID, then call find_and_verify_customer."
         if code == "NOT_VERIFIED"
-        else "Explain the refusal to the customer and cite the rule ID."
+        else "Nothing was changed. If you used a wrong argument (e.g. destination or amount), correct it and retry; "
+        "otherwise explain the refusal to the customer and cite the rule ID. Never say it was done."
     )
     return err(code, decision.message, hint, decision.rule_ids)

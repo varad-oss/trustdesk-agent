@@ -21,4 +21,4 @@ Source: [`results/retrieval.json`](../results/retrieval.json) (`make eval-retrie
 
 ## Agent results (D0–D3)
 
-**Not yet measured.** No reported run exists in `results/`. Run `make eval-full` (asks for cost confirmation after a pilot), then `make report`.
+**Not yet measured.** No reported run exists in `results/`. Run `make eval-full` (a short pilot first estimates the wall-clock time), then `make report`.

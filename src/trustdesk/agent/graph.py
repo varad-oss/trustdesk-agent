@@ -6,7 +6,7 @@
     agent --(final text)--> END
 
 Design rules that keep this correct:
-- Messages are append-only (thinking blocks stay valid; prompt cache stays warm).
+- Messages are append-only (auditable history; the inference server can reuse its prefix cache).
 - The system prompt and tool list are constant per conversation.
 - `approval_gate` re-runs from its first line on resume, so everything before
   `interrupt()` is side-effect free; the write happens after approval, under an
@@ -30,8 +30,8 @@ from trustdesk.config import DefenseLevel
 from trustdesk.env.store import Env
 from trustdesk.hitl import approvals
 from trustdesk.hitl.approvals import ApprovalResponse
-from trustdesk.observability.pricing import add_usage, cost_usd
 from trustdesk.observability.tracing import Tracer
+from trustdesk.observability.usage import add_usage
 from trustdesk.tools import WRITE_TOOLS, ToolContext, execute_tool, tool_specs, validate_args
 from trustdesk.tools.base import Retriever, err
 from trustdesk.tools.write import preview
@@ -114,18 +114,17 @@ def build_graph(
             return {"status": "max_steps"}
         level = DefenseLevel(state.get("defense_level", 3))
         resp = model.complete(prompts[level], specs, state["messages"])
-        cost = cost_usd(model.name, resp.usage)
         event = tracer.record(
             state["trace_id"],
             "model",
             model.name,
-            {"usage": resp.usage, "cost_usd": cost, "latency_s": resp.latency_s, "stop_reason": resp.stop_reason, "request_id": resp.request_id},
+            {"usage": resp.usage, "latency_s": resp.latency_s, "stop_reason": resp.stop_reason, "request_id": resp.request_id},
         )
         content = resp.content or [{"type": "text", "text": "(no response)"}]
         update: dict[str, Any] = {
             "messages": [{"role": "assistant", "content": content}],
             "events": [event],
-            "usage": add_usage(state.get("usage", {}), {**resp.usage, "cost_usd": cost, "latency_s": resp.latency_s, "model_calls": 1}),
+            "usage": add_usage(state.get("usage", {}), {**resp.usage, "latency_s": resp.latency_s, "model_calls": 1}),
             "step_count": state.get("step_count", 0) + 1,
         }
         tool_uses = [b for b in content if b.get("type") == "tool_use"]

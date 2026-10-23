@@ -48,3 +48,17 @@ def test_unknown_session_and_approval(client):
     assert client.get("/sessions/nope").status_code == 404
     assert client.post("/approvals/999", json={"decision": "approve"}).status_code == 404
     assert "SS-10482" in client.post("/demo/attack").json()["message"]
+
+
+def test_unreachable_local_model_returns_503(tmp_path, monkeypatch):
+    monkeypatch.setenv("TRUSTDESK_PROVIDER", "ollama")
+    monkeypatch.setenv("TRUSTDESK_OLLAMA_URL", "http://127.0.0.1:9")  # nothing listens here
+    monkeypatch.setenv("TRUSTDESK_RETRIEVAL_MODE", "bm25")
+    monkeypatch.setenv("TRUSTDESK_STORE_PATH", str(tmp_path / "store.db"))
+    monkeypatch.setenv("TRUSTDESK_CHECKPOINT_PATH", str(tmp_path / "ckpt.db"))
+    monkeypatch.setenv("TRUSTDESK_TRACE_DIR", str(tmp_path / "traces"))
+    from trustdesk.api.app import app
+
+    with TestClient(app) as c:
+        r = c.post("/chat", json={"message": "hi"})
+    assert r.status_code == 503 and "ollama" in r.json()["detail"].lower()

@@ -6,9 +6,9 @@ the files it names, run "Verify it yourself", then do the break-it exercise.
 | Decision | One-line justification |
 |---|---|
 | LangGraph state machine | Explicit control flow + durable `interrupt()`/resume for human approval. |
-| Custom Anthropic model node | Guarantees Haiku 5.5 rules: no sampling params, no prefill, thinking blocks unchanged, constant prefix. |
-| Append-only messages | Keeps thinking blocks valid and the prompt cache warm. |
-| Constant tool list; permissions in tools | Changing tools mid-conversation breaks thinking replay; code enforcement is stronger anyway. |
+| Local qwen3:8b via native Ollama API | Free; native API is the only way to set num_ctx (no silent front-truncation) and turn thinking off. |
+| Append-only messages | Auditable history; unchanged prefix lets Ollama reuse its KV cache. |
+| Constant tool list; permissions in tools | A stable prefix is cacheable and predictable; code enforcement is stronger than hiding tools. |
 | Deterministic policy engine | Money and identity invariants hold even when the model is wrong or injected. |
 | Engine decides tier 2 | One source of truth for what needs a human (REF-4, GW-1, FR-1). |
 | Deny never reaches a human | A tired approver can't approve a policy violation (defense in depth). |
@@ -30,8 +30,9 @@ the files it names, run "Verify it yourself", then do the break-it exercise.
 | Bootstrap over tasks | Trials of one task are correlated. |
 | Independent invariant checker | Catches bugs in the engine itself. |
 | Utility under attack + ASR | A refuse-everything agent must not look "secure". |
-| Pilot before paid runs | Measured $/episode before committing budget. |
+| Pilot before long runs | Measured seconds/episode before committing hours of local compute. |
 | JSONL traces, Langfuse optional | Results reproducible from committed files. |
 | Rule-based demo model | Quickstart and Docker demo work with no key; never evaluated. |
 | Plain sqlite3 | Small schema; visible SQL; fast per-episode copies. |
 | Vanilla JS console | No build step, same container. |
+| Free and local only | Requirement (ADR-009): Ollama + fastembed + JSONL; $0 to develop, test, evaluate and demo. |

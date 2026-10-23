@@ -63,4 +63,5 @@ class CustomerSimulator:
         for r in self.responses:
             for k, v in r.usage.items():
                 total[k] = total.get(k, 0) + v
+            total["latency_s"] = total.get("latency_s", 0) + r.latency_s
         return total

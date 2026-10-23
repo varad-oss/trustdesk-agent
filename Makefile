@@ -1,5 +1,5 @@
 # TrustDesk developer commands. Every number in docs comes from a target here.
-.PHONY: install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-rubber-stamp report docker-up
+.PHONY: ollama-pull install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-lean eval-rubber-stamp report docker-up
 
 install:
 	uv sync --all-extras
@@ -25,6 +25,9 @@ demo-tools:
 chat:
 	uv run trustdesk chat --defense 3
 
+ollama-pull:
+	ollama pull qwen3:8b
+
 chat-fake:
 	uv run trustdesk chat --defense 3 --provider fake
 
@@ -39,13 +42,18 @@ validate:
 eval-retrieval:
 	uv run trustdesk eval retrieval
 
-# 3 tasks x 1 trial at D0 and D2 with the configured (paid) model
+# 3 tasks x 1 trial at D0 and D2 with the local model (free; needs `ollama pull qwen3:8b`)
 eval-smoke:
-	uv run trustdesk eval run --levels 0,2 --trials 1 --tasks benign-01-refund-damaged-upi,edge-01-final-sale-saree,attack-01-review-upi --run-id smoke-$$(date +%Y%m%d-%H%M%S)
+	uv run trustdesk eval run --levels 0,2 --trials 1 --concurrency 1 --yes --tasks benign-01-refund-damaged-upi,edge-01-final-sale-saree,attack-01-review-upi --run-id smoke-$$(date +%Y%m%d-%H%M%S)
 
-# Full ablation: all tasks x D0-D3 x 3 trials. Runs a pilot, prints measured cost, asks before spending.
+# Full ablation: all tasks x D0-D3 x 3 trials (432 episodes, many hours locally).
+# Runs a 3-episode pilot first, prints the estimated wall-clock time and asks before continuing.
 eval-full:
-	uv run trustdesk eval run --levels 0,1,2,3 --trials 3 --reported
+	uv run trustdesk eval run --levels 0,1,2,3 --trials 3 --concurrency 1 --reported
+
+# Same ablation with 1 trial (144 episodes): pass^1 only, a faster first look
+eval-lean:
+	uv run trustdesk eval run --levels 0,1,2,3 --trials 1 --concurrency 1 --reported --run-id lean-$$(date +%Y%m%d)
 
 # Defense in depth: approve everything at D3 and show the policy engine still blocks attacks
 eval-rubber-stamp:

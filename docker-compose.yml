@@ -1,3 +1,5 @@
+# Free and local: the app talks to Ollama running on your machine (GPU-accelerated on macOS).
+# Without Ollama: TRUSTDESK_PROVIDER=fake docker compose up   (rule-based demo, not an LLM)
 services:
   app:
     build: .
@@ -7,8 +9,10 @@ services:
       - path: .env
         required: false
     environment:
-      # Without an API key the rule-based demo model runs, so `docker compose up` always works.
-      TRUSTDESK_PROVIDER: ${TRUSTDESK_PROVIDER:-fake}
+      TRUSTDESK_PROVIDER: ${TRUSTDESK_PROVIDER:-ollama}
+      TRUSTDESK_OLLAMA_URL: ${TRUSTDESK_OLLAMA_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - trustdesk-data:/app/data
 volumes:

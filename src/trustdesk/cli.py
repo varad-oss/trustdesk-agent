@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
 import typer
 
 from trustdesk.config import DefenseLevel, load_settings
@@ -69,7 +70,7 @@ def demo_tools() -> None:
 def chat(
     defense: int = typer.Option(3, min=0, max=3, help="Defense level D0-D3."),
     session: str | None = typer.Option(None, help="Resume an existing session ID."),
-    provider: str | None = typer.Option(None, help="anthropic | openai_compat | fake (overrides TRUSTDESK_PROVIDER)."),
+    provider: str | None = typer.Option(None, help="ollama | openai_compat | fake (overrides TRUSTDESK_PROVIDER)."),
 ) -> None:
     """Chat with TrustDesk in the terminal. Tier-2 actions pause for your approval."""
     from trustdesk.agent.runtime import Conversation
@@ -80,7 +81,7 @@ def chat(
         settings.provider = provider
     runtime = build_runtime(settings)
     convo = Conversation(runtime.graph, session, DefenseLevel(defense))
-    typer.secho(f"TrustDesk [{settings.provider}:{settings.model if settings.provider != 'fake' else 'rule-based demo'}] "
+    typer.secho(f"TrustDesk [{settings.provider}:{settings.model if settings.provider != 'fake' else 'rule-based demo'}, local, $0] "
                 f"session={convo.session_id} defense=D{defense}. Type 'quit' to exit.", fg="green")
 
     def handle(result) -> None:
@@ -101,7 +102,12 @@ def chat(
         text = typer.prompt("you")
         if text.strip().lower() in {"quit", "exit"}:
             break
-        handle(convo.send(text))
+        try:
+            handle(convo.send(text))
+        except httpx.ConnectError:
+            typer.secho(f"Can't reach Ollama at {settings.ollama_base_url}. Run `ollama serve` and `ollama pull {settings.model}`, "
+                        "or use --provider fake.", fg="red")
+            raise typer.Exit(1) from None
 
 
 @approvals_app.command("list")
@@ -168,7 +174,7 @@ def eval_run(
     approver: str = typer.Option("task", help="task | rubber_stamp"),
     run_id: str | None = typer.Option(None),
     reported: bool = typer.Option(False, help="A run whose numbers go into docs: asserts the LLM cache is off."),
-    yes: bool = typer.Option(False, "--yes", help="Skip the cost confirmation."),
+    yes: bool = typer.Option(False, "--yes", help="Skip the pilot and time confirmation."),
 ) -> None:
     """Run episodes and write results/<run_id>/."""
     from evals.runner import cli_run
@@ -186,28 +192,28 @@ def eval_report(run_id: str | None = typer.Option(None, help="Defaults to the la
 
 @app.command()
 def trace(trace_id: str, directory: str | None = typer.Option(None, help="Trace directory (default: TRUSTDESK_TRACE_DIR).")) -> None:
-    """Pretty-print one JSONL trace: model calls (tokens, cost, latency), tool calls and approvals."""
+    """Pretty-print one JSONL trace: model calls (tokens, latency), tool calls and approvals."""
     from pathlib import Path
 
     path = Path(directory or load_settings().trace_dir) / f"{trace_id}.jsonl"
     if not path.exists():
         typer.secho(f"No trace at {path}", fg="red")
         raise typer.Exit(1)
-    total = 0.0
+    total = 0.0  # seconds spent in model calls
     for line in path.read_text(encoding="utf-8").splitlines():
         e = json.loads(line)
         if e["kind"] == "model":
             u = e.get("usage", {})
-            total += e.get("cost_usd", 0.0)
+            total += e.get("latency_s", 0.0)
             typer.echo(f"MODEL    {e['name']:<28} in={u.get('input_tokens', 0):>6} out={u.get('output_tokens', 0):>5} "
                        f"think={u.get('thinking_tokens', 0):>5} cache_read={u.get('cache_read_input_tokens', 0):>6} "
-                       f"${e.get('cost_usd', 0):.5f} {e.get('latency_s', 0):.2f}s stop={e.get('stop_reason')}")
+                       f"{e.get('latency_s', 0):.2f}s stop={e.get('stop_reason')}")
         elif e["kind"] == "tool":
             status = "ok" if e.get("ok") else f"ERR {e.get('error_code')}"
             typer.echo(f"TOOL     {e['name']:<28} {status:<22} {json.dumps(e.get('input', {}), ensure_ascii=False)[:90]}")
         else:
             typer.echo(f"{e['kind'].upper():<8} {e['name']:<28} {json.dumps({k: v for k, v in e.items() if k not in {'ts', 'trace_id', 'kind', 'name'}}, ensure_ascii=False)[:110]}")
-    typer.echo(f"total model cost ${total:.5f}")
+    typer.echo(f"total model time {total:.1f}s (local model: $0)")
 
 
 @app.command()

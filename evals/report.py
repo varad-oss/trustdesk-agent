@@ -56,7 +56,7 @@ def level_metrics(episodes: list[dict[str, Any]]) -> dict[str, Any]:
         lo, hi = bootstrap_ci(per_task, lambda g, k=k: mean_pass_hat_k(g, k))
         passk[k] = (est, lo, hi)
     escal_expected = [e for e in ok if e["grade"].get("escalation_expected")]
-    costs = [e.get("agent_cost_usd", 0.0) for e in ok]
+    agent_s = [e.get("agent_model_s", 0.0) for e in ok]
     lat = [e.get("latency_s", 0.0) for e in ok]
     usage = Counter()
     for e in ok:
@@ -75,8 +75,8 @@ def level_metrics(episodes: list[dict[str, Any]]) -> dict[str, Any]:
             "missed": sum(not e["grade"]["escalated"] for e in escal_expected),
             "unnecessary": sum(e["grade"]["escalated"] and not e["grade"].get("escalation_expected") for e in ok),
         },
-        "cost_per_episode": sum(costs) / n,
-        "sim_cost_per_episode": sum(e.get("simulator_cost_usd", 0.0) for e in ok) / n,
+        "agent_s_per_episode": sum(agent_s) / n,
+        "sim_s_per_episode": sum(e.get("simulator_model_s", 0.0) for e in ok) / n,
         "latency_p50": percentile(lat, 50),
         "latency_p95": percentile(lat, 95),
         "turns": sum(e.get("customer_turns", 0) for e in ok) / n,
@@ -136,7 +136,7 @@ def render(run_dir: Path | None) -> str:
 
     if run_dir is None:
         lines += ["## Agent results (D0–D3)", "", "**Not yet measured.** No reported run exists in `results/`. "
-                  "Run `make eval-full` (asks for cost confirmation after a pilot), then `make report`.", ""]
+                  "Run `make eval-full` (a short pilot first estimates the wall-clock time), then `make report`.", ""]
         return "\n".join(lines)
 
     cfg = json.loads((run_dir / "config.json").read_text())
@@ -150,23 +150,23 @@ def render(run_dir: Path | None) -> str:
     rel = Path(os.path.relpath(run_dir, REPO_ROOT))
     lines += [f"## Agent results — run `{cfg['run_id']}`", "",
               f"Source: [`{rel}/episodes.jsonl`](../{rel}/episodes.jsonl). Date {cfg['created_at'][:10]}; agent `{s.get('provider')}:{s.get('model')}` "
-              f"(effort {s.get('effort')}); simulator `{s.get('simulator_provider')}:{s.get('simulator_model')}`; {len(cfg['task_ids'])} tasks × "
+              f"(thinking {'on' if s.get('think') else 'off'}, num_ctx {s.get('num_ctx')}); simulator `{s.get('simulator_provider')}:{s.get('simulator_model')}`; {len(cfg['task_ids'])} tasks × "
               f"{cfg['trials']} trials; approver `{cfg['approver']}`; retrieval `{s.get('retrieval_mode_effective')}`; reported={s.get('reported')}.", "",
               "Proportions show the point estimate, a 95% Wilson interval and n (episodes). pass^k uses the unbiased estimator C(c,k)/C(n,k) "
               "averaged over tasks, with a 95% bootstrap interval over tasks.", "",
-              "| Level | Benign utility | Utility under attack | Attack success rate | pass^k | Episodes with policy violations | Agent $/episode |",
+              "| Level | Benign utility | Utility under attack | Attack success rate | pass^k | Episodes with policy violations | Agent model s/episode |",
               "|---|---|---|---|---|---|---|"]
     for lv, m in metrics.items():
         pk = "; ".join(f"k={k}: {e:.2f} [{lo:.2f}, {hi:.2f}]" for k, (e, lo, hi) in m["passk"].items())
-        lines.append(f"| D{lv} | {m['benign_utility']} | {m['utility_under_attack']} | {m['asr']} | {pk} | {m['violations']} | ${m['cost_per_episode']:.4f} |")
+        lines.append(f"| D{lv} | {m['benign_utility']} | {m['utility_under_attack']} | {m['asr']} | {pk} | {m['violations']} | {m['agent_s_per_episode']:.1f} |")
     lines += ["", "Under D2+ the policy engine makes most invariant violations impossible by construction; the post-hoc checker "
               "(`evals/graders.py::policy_violations`) re-implements the invariants independently, so it remains a real check on the engine.", "",
-              "### Efficiency", "", "| Level | Customer turns | Tool calls | Input tok | Output tok | Thinking tok | Cache-read tok | Sim $/episode | Latency p50 / p95 (s) | Infra failures |",
+              "### Efficiency", "", "| Level | Customer turns | Tool calls | Input tok | Output tok | Thinking tok | Cache-read tok | Simulator s/episode | Latency p50 / p95 (s) | Infra failures |",
               "|---|---|---|---|---|---|---|---|---|---|"]
     for lv, m in metrics.items():
         t = m["tokens"]
         lines.append(f"| D{lv} | {m['turns']:.1f} | {m['tool_calls']:.1f} | {t['input_tokens']:.0f} | {t['output_tokens']:.0f} | {t['thinking_tokens']:.0f} | "
-                     f"{t['cache_read_input_tokens']:.0f} | ${m['sim_cost_per_episode']:.4f} | {m['latency_p50']:.1f} / {m['latency_p95']:.1f} | {m['infra_failed']} |")
+                     f"{t['cache_read_input_tokens']:.0f} | {m['sim_s_per_episode']:.1f} | {m['latency_p50']:.1f} / {m['latency_p95']:.1f} | {m['infra_failed']} |")
     lines += ["", "### Escalation quality", "", "| Level | Correct | Missed | Unnecessary |", "|---|---|---|---|"]
     for lv, m in metrics.items():
         esc = m["escalation"]

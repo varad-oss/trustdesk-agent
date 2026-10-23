@@ -3,7 +3,7 @@
 Events always go to JSONL (`data/traces/<trace_id>.jsonl`), which is what the eval
 trajectories link to. If LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY are set and the
 `langfuse` extra is installed, the same events are also sent to Langfuse under the
-same trace ID (ADR-005).
+same trace ID (ADR-005). Use a self-hosted Langfuse (free, Docker) - never a paid service.
 """
 
 from __future__ import annotations
@@ -60,12 +60,11 @@ class Tracer:
                 "trace_context": {"trace_id": trace_id},
                 "name": name,
                 "as_type": as_type,
-                "metadata": {k: v for k, v in data.items() if k not in {"usage", "cost_usd"}},
+                "metadata": {k: v for k, v in data.items() if k != "usage"},
             }
             if as_type == "generation":
                 kwargs["model"] = data.get("model")
                 kwargs["usage_details"] = {k: int(v) for k, v in data.get("usage", {}).items()}
-                kwargs["cost_details"] = {"total": float(data.get("cost_usd", 0.0))}
             self._langfuse.start_observation(**kwargs).end()
         except Exception as exc:  # noqa: BLE001
             log.warning("Langfuse send failed: %s", exc)

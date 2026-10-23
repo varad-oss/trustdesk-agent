@@ -1,1 +1,1 @@
-"""Tracing (JSONL always, Langfuse when configured) and cost accounting."""
+"""Tracing (JSONL always, self-hosted Langfuse when configured) and usage accounting."""

@@ -12,8 +12,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+import httpx
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from trustdesk.agent.graph import conversation_excerpt
@@ -40,6 +41,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="TrustDesk", version="0.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(httpx.ConnectError)
+def model_unreachable(request: Request, exc: httpx.ConnectError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The local model server is not reachable. Start Ollama (`ollama serve`, model "
+                 f"`{runtime().settings.model}`) or set TRUSTDESK_PROVIDER=fake for the rule-based demo."},
+    )
 
 
 def runtime() -> AppRuntime:

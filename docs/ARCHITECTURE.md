@@ -12,7 +12,7 @@ flowchart LR
   API[FastAPI<br/>api/app.py]
   subgraph Agent["Agent (LangGraph)"]
     G[graph.py<br/>agent → tools → approval_gate → finalize]
-    M[model.py<br/>Anthropic / OpenAI-compat / fake]
+    M[model.py<br/>Ollama / local OpenAI-compat / fake]
     P[prompts.py<br/>constant per defense level]
   end
   subgraph Guardrails["Guardrails in code"]
@@ -63,7 +63,7 @@ stateDiagram-v2
 
 State (`AgentState` in `agent/graph.py`): append-only `messages` and `events`; `session_id`, `trace_id`,
 `defense_level`, `verified_customer_id`; `pending_calls`, `tool_results`, `pending_approval`; `step_count`,
-`call_counts` (loop detection); cumulative `usage` (tokens, cost); `status`, `final_text`.
+`call_counts` (loop detection); cumulative `usage` (tokens, model seconds); `status`, `final_text`.
 
 ## Approval sequence (D3)
 
@@ -101,7 +101,7 @@ sequenceDiagram
 
 ## Explaining it in five sentences
 
-TrustDesk is a LangGraph state machine where a Claude model chooses tools and plain Python decides whether they
+TrustDesk is a LangGraph state machine where a local LLM (qwen3:8b on Ollama) chooses tools and plain Python decides whether they
 run. Every write tool calls a deterministic policy engine that encodes the written support policy, so refunds
 cannot exceed what was paid, go to unverified UPI IDs, or touch another customer's order, whatever the model was
 told. Actions the policy marks as needing a human pause the graph with `interrupt()`, persist in a SQLite

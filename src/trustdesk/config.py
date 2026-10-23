@@ -28,21 +28,20 @@ class DefenseLevel(IntEnum):
 
 
 class Settings(BaseModel):
-    provider: str = Field(default="anthropic", description="anthropic | openai_compat | fake")
-    model: str = "claude-haiku-5-5"
-    effort: str = "low"
-    max_tokens: int = 8000
-    simulator_provider: str = "anthropic"
-    simulator_model: str = "claude-haiku-5-5"
-    openai_base_url: str = "http://localhost:11434/v1"
-    openai_api_key: str = ""
+    provider: str = Field(default="ollama", description="ollama | openai_compat | fake (all free, all local)")
+    model: str = "qwen3:8b"
+    think: bool = False
+    num_ctx: int = 16384
+    simulator_provider: str = "ollama"
+    simulator_model: str = "qwen3:8b"
+    ollama_base_url: str = "http://localhost:11434"
+    openai_base_url: str = "http://localhost:8080/v1"
     defense_level: DefenseLevel = DefenseLevel.D3
     max_steps: int = 25
     retrieval_mode: str = Field(default="hybrid", description="hybrid | bm25 | dense")
     store_path: Path = REPO_ROOT / "data" / "shopsetu.db"
     checkpoint_path: Path = REPO_ROOT / "data" / "checkpoints.db"
     trace_dir: Path = REPO_ROOT / "data" / "traces"
-    pricing_path: Path = REPO_ROOT / "config" / "pricing.yaml"
     llm_cache_dir: Path | None = None
 
 
@@ -51,13 +50,14 @@ def load_settings() -> Settings:
     env = os.environ
     cache_dir = env.get("TRUSTDESK_LLM_CACHE_DIR")
     return Settings(
-        provider=env.get("TRUSTDESK_PROVIDER", "anthropic"),
-        model=env.get("TRUSTDESK_MODEL", "claude-haiku-5-5"),
-        effort=env.get("TRUSTDESK_EFFORT", "low"),
-        simulator_provider=env.get("TRUSTDESK_SIM_PROVIDER", env.get("TRUSTDESK_PROVIDER", "anthropic")),
-        simulator_model=env.get("TRUSTDESK_SIM_MODEL", "claude-haiku-5-5"),
-        openai_base_url=env.get("TRUSTDESK_OPENAI_BASE_URL", "http://localhost:11434/v1"),
-        openai_api_key=env.get("TRUSTDESK_OPENAI_API_KEY", ""),
+        provider=env.get("TRUSTDESK_PROVIDER", "ollama"),
+        model=env.get("TRUSTDESK_MODEL", "qwen3:8b"),
+        think=env.get("TRUSTDESK_THINK", "false").lower() == "true",
+        num_ctx=int(env.get("TRUSTDESK_NUM_CTX", "16384")),
+        simulator_provider=env.get("TRUSTDESK_SIM_PROVIDER", env.get("TRUSTDESK_PROVIDER", "ollama")),
+        simulator_model=env.get("TRUSTDESK_SIM_MODEL", "qwen3:8b"),
+        ollama_base_url=env.get("TRUSTDESK_OLLAMA_URL", "http://localhost:11434"),
+        openai_base_url=env.get("TRUSTDESK_OPENAI_BASE_URL", "http://localhost:8080/v1"),
         defense_level=DefenseLevel(int(env.get("TRUSTDESK_DEFENSE_LEVEL", "3"))),
         max_steps=int(env.get("TRUSTDESK_MAX_STEPS", "25")),
         retrieval_mode=env.get("TRUSTDESK_RETRIEVAL_MODE", "hybrid"),

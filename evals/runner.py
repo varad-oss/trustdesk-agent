@@ -1,4 +1,4 @@
-"""Episode runner: tasks x defense levels x trials, with isolation, retries and cost control.
+"""Episode runner: tasks x defense levels x trials, with isolation, retries and a time estimate.
 
 Each episode gets a fresh in-memory store and its own graph thread. The simulated customer
 talks to the agent until ###STOP### or 12 customer turns; tier-2 approvals are answered by a
@@ -30,13 +30,12 @@ from trustdesk.agent.model import ChatModel
 from trustdesk.agent.runtime import Conversation
 from trustdesk.config import REPO_ROOT, DefenseLevel, Settings, load_settings
 from trustdesk.env import fresh_env
-from trustdesk.observability.pricing import cost_usd
 from trustdesk.observability.tracing import Tracer
 from trustdesk.retrieval import build_index
 
 RESULTS_DIR = REPO_ROOT / "results"
-PAID_CALL_CONFIRM_THRESHOLD = 50
-INFRA_MODULES = ("anthropic", "httpx", "httpcore", "openai")
+CONFIRM_IF_LONGER_THAN_MIN = 20  # local models are free but slow: confirm long runs after a pilot
+INFRA_MODULES = ("httpx", "httpcore")
 
 
 @dataclass
@@ -146,8 +145,9 @@ def run_episode(
         "tool_calls": len(view.tool_calls),
         "status": state.get("status"),
         "usage": usage,
-        "agent_cost_usd": usage.get("cost_usd", 0.0),
-        "simulator_cost_usd": cost_usd(sim_model.name, sim_usage),
+        "agent_model_s": usage.get("latency_s", 0.0),
+        "simulator_model_s": sim_usage.get("latency_s", 0.0),
+        "simulator_usage": sim_usage,
         "latency_s": time.perf_counter() - started,
         "error": error,
         "grade": grade.to_dict(),
@@ -222,7 +222,7 @@ def run(
             sink.flush()
             g = rec.get("grade", {})
             print(f"[{i}/{len(jobs)}] {rec['episode_id']}: success={g.get('success')} attack={g.get('attack_success')} "
-                  f"${rec.get('agent_cost_usd', 0) + rec.get('simulator_cost_usd', 0):.4f} {rec.get('error') or ''}")
+                  f"{rec.get('latency_s', 0):.0f}s {rec.get('error') or ''}")
     return out_dir
 
 
@@ -247,19 +247,20 @@ def cli_run(
     retriever = build_index(settings.retrieval_mode)
     run_id = run_id or f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{settings.provider}"
     n_episodes = len(tasks) * len(level_list) * trials
-    paid = settings.provider != "fake" or settings.simulator_provider != "fake"
-    est_calls = n_episodes * 8  # ~6 agent + ~2 simulator calls per episode; refined by the pilot
-    if paid and est_calls > PAID_CALL_CONFIRM_THRESHOLD and not yes:
+    uses_model = settings.provider != "fake" or settings.simulator_provider != "fake"
+    if uses_model and n_episodes > 6 and not yes:
         pilot_tasks = tasks[:3]
         typer.echo(f"Pilot: {len(pilot_tasks)} episodes at D{max(level_list)} before the full run of {n_episodes} episodes...")
         pilot_dir = run(pilot_tasks, RunConfig(f"{run_id}-pilot", [max(level_list)], 1, approver, concurrency),
                         lambda: make_model(settings, "agent"), lambda: make_model(settings, "simulator"), retriever)
         recs = [json.loads(line) for line in (pilot_dir / "episodes.jsonl").read_text().splitlines()]
-        per_ep = sum(r.get("agent_cost_usd", 0) + r.get("simulator_cost_usd", 0) for r in recs) / max(len(recs), 1)
-        typer.echo(f"Measured cost per episode: ${per_ep:.4f}. Extrapolated total for {n_episodes} episodes: ${per_ep * n_episodes:.2f}")
-        if not typer.confirm("Proceed with the full run?"):
+        per_ep = sum(r.get("latency_s", 0) for r in recs) / max(len(recs), 1)
+        minutes = per_ep * n_episodes / 60 / max(concurrency, 1)
+        typer.echo(f"Measured {per_ep:.0f}s per episode (cost $0, local model). Estimated wall-clock for {n_episodes} episodes "
+                   f"at concurrency {concurrency}: {minutes:.0f} min (Ollama may serialise requests; see OLLAMA_NUM_PARALLEL).")
+        if minutes > CONFIRM_IF_LONGER_THAN_MIN and not typer.confirm("Proceed with the full run?"):
             raise typer.Exit()
-    snapshot = settings.model_dump(exclude={"openai_api_key"})
+    snapshot = settings.model_dump()
     out = run(tasks, RunConfig(run_id, level_list, trials, approver, concurrency),
               lambda: make_model(settings, "agent"), lambda: make_model(settings, "simulator"), retriever,
               {**snapshot, "reported": reported, "retrieval_mode_effective": retriever.mode})

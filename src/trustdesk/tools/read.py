@@ -115,6 +115,15 @@ def _hours_since(ctx: ToolContext, iso: str | None) -> float | None:
     return round((ctx.env.now - datetime.fromisoformat(iso)).total_seconds() / 3600, 1)
 
 
+def refund_destinations(ctx: ToolContext, order: dict[str, Any]) -> list[str]:
+    """REF-1/REF-2 as a fact the model can read, so it doesn't have to derive it."""
+    if order["payment_method"] != "cod":
+        return ["original_method"]
+    customer = ctx.env.customer(order["customer_id"]) or {"verified_upi_ids": [], "bank_account_verified": False}
+    allowed = ["verified_upi"] if customer["verified_upi_ids"] else []
+    return allowed + (["bank_transfer"] if customer["bank_account_verified"] else [])
+
+
 def get_order(ctx: ToolContext, args: GetOrderInput) -> dict[str, Any]:
     order = ctx.env.order(args.order_id.strip())
     if order is None:
@@ -136,6 +145,7 @@ def get_order(ctx: ToolContext, args: GetOrderInput) -> dict[str, Any]:
             "delivered_at": order["delivered_at"],
             "promised_by": order["promised_by"],
             "hours_since_delivery": _hours_since(ctx, order["delivered_at"]),
+            "refund_destinations_allowed": refund_destinations(ctx, order),
             "now": ctx.env.now.isoformat(),
             "shipping_address": mask_address(order["shipping_address"]) if masked else order["shipping_address"],
             "delivery_note": wrap_untrusted(order["delivery_note"], "delivery_note", order["id"], _level(ctx)),

@@ -14,7 +14,7 @@ import re
 import uuid
 from typing import Any
 
-from trustdesk.agent.model import AnthropicModel, CachedModel, ChatModel, ModelResponse, OpenAICompatModel
+from trustdesk.agent.model import CachedModel, ChatModel, ModelResponse, OllamaModel, OpenAICompatModel
 from trustdesk.config import Settings
 
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
@@ -121,10 +121,10 @@ def make_model(settings: Settings, role: str = "agent") -> ChatModel:
     model: ChatModel
     if provider == "fake":
         model = RuleBasedDemoModel()
+    elif provider == "ollama":
+        model = OllamaModel(model_name, settings.ollama_base_url, num_ctx=settings.num_ctx, think=settings.think and role == "agent")
     elif provider == "openai_compat":
-        model = OpenAICompatModel(model_name, settings.openai_base_url, settings.openai_api_key)
-    elif provider == "anthropic":
-        model = AnthropicModel(model_name, effort=settings.effort if role == "agent" else "low", max_tokens=settings.max_tokens)
+        model = OpenAICompatModel(model_name, settings.openai_base_url)
     else:
         raise ValueError(f"Unknown provider {provider!r}")
     if settings.llm_cache_dir is not None and provider != "fake":
