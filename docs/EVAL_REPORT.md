@@ -19,6 +19,75 @@ Source: [`results/retrieval.json`](../results/retrieval.json) (`make eval-retrie
 | dense | 0.64 | 0.88 | 0.78 |
 | hybrid | 0.64 | 0.96 | 0.78 |
 
-## Agent results (D0–D3)
+## Agent results — run `lean-20261023`
 
-**Not yet measured.** No reported run exists in `results/`. Run `make eval-full` (a short pilot first estimates the wall-clock time), then `make report`.
+Source: [`results/lean-20261023/episodes.jsonl`](../results/lean-20261023/episodes.jsonl). Date 2026-10-23; agent `ollama:qwen3:8b` (thinking off, num_ctx 16384); simulator `ollama:qwen3:8b`; 36 tasks × 1 trials; approver `task`; retrieval `hybrid`; reported=True.
+
+Proportions show the point estimate, a 95% Wilson interval and n (episodes). pass^k uses the unbiased estimator C(c,k)/C(n,k) averaged over tasks, with a 95% bootstrap interval over tasks.
+
+| Level | Benign utility | Utility under attack | Attack success rate | pass^k | Episodes with policy violations | Agent model s/episode |
+|---|---|---|---|---|---|---|
+| D0 | 0.23 [0.11, 0.42] (n=26) | 0.40 [0.17, 0.69] (n=10) | 0.10 [0.02, 0.40] (n=10) | k=1: 0.28 [0.14, 0.42] | 0.22 [0.12, 0.38] (n=36) | 110.2 |
+| D1 | 0.27 [0.14, 0.46] (n=26) | 0.20 [0.06, 0.51] (n=10) | 0.00 [0.00, 0.28] (n=10) | k=1: 0.22 [0.08, 0.36] | 0.17 [0.08, 0.32] (n=36) | 19.7 |
+| D2 | 0.27 [0.14, 0.46] (n=26) | 0.10 [0.02, 0.40] (n=10) | 0.00 [0.00, 0.28] (n=10) | k=1: 0.22 [0.08, 0.36] | 0.00 [0.00, 0.10] (n=36) | 19.7 |
+| D3 | 0.19 [0.09, 0.38] (n=26) | 0.20 [0.06, 0.51] (n=10) | 0.00 [0.00, 0.28] (n=10) | k=1: 0.17 [0.06, 0.31] | 0.00 [0.00, 0.10] (n=36) | 19.8 |
+
+Under D2+ the policy engine makes most invariant violations impossible by construction; the post-hoc checker (`evals/graders.py::policy_violations`) re-implements the invariants independently, so it remains a real check on the engine.
+
+### Efficiency
+
+| Level | Customer turns | Tool calls | Input tok | Output tok | Thinking tok | Cache-read tok | Simulator s/episode | Latency p50 / p95 (s) | Infra failures |
+|---|---|---|---|---|---|---|---|---|---|
+| D0 | 3.6 | 3.1 | 16622 | 326 | 0 | 0 | 82.3 | 31.8 / 759.5 | 0 |
+| D1 | 3.5 | 2.9 | 16454 | 327 | 0 | 0 | 7.6 | 25.6 / 43.9 | 0 |
+| D2 | 4.0 | 3.2 | 19214 | 370 | 0 | 0 | 8.1 | 25.6 / 45.5 | 0 |
+| D3 | 4.4 | 3.2 | 20563 | 378 | 0 | 0 | 8.9 | 25.5 / 51.8 | 0 |
+
+### Escalation quality
+
+| Level | Correct | Missed | Unnecessary |
+|---|---|---|---|
+| D0 | 1 | 0 | 0 |
+| D1 | 1 | 0 | 0 |
+| D2 | 1 | 0 | 0 |
+| D3 | 1 | 0 | 0 |
+
+### Failure taxonomy (automatic first pass; review the examples by hand)
+
+| Level | Failure class | Count |
+|---|---|---|
+| D0 | incomplete_or_wrong_tool | 14 |
+| D0 | wrong_arguments | 6 |
+| D0 | missing_citation | 4 |
+| D0 | followed_injection | 1 |
+| D0 | premature_action | 1 |
+| D1 | incomplete_or_wrong_tool | 18 |
+| D1 | wrong_arguments | 5 |
+| D1 | missing_citation | 4 |
+| D1 | premature_action | 1 |
+| D2 | incomplete_or_wrong_tool | 14 |
+| D2 | skipped_verification | 8 |
+| D2 | wrong_arguments | 4 |
+| D2 | missing_citation | 2 |
+| D3 | incomplete_or_wrong_tool | 14 |
+| D3 | skipped_verification | 8 |
+| D3 | policy_misread | 3 |
+| D3 | wrong_arguments | 3 |
+| D3 | missing_citation | 2 |
+
+Example failed trajectories:
+
+- D0: [`ambiguous-01-which-item__D0__t1`](../results/lean-20261023/trajectories/ambiguous-01-which-item__D0__t1.jsonl)
+- D0: [`ambiguous-02-incomplete-address__D0__t1`](../results/lean-20261023/trajectories/ambiguous-02-incomplete-address__D0__t1.jsonl)
+- D0: [`attack-02-delivery-note-goodwill__D0__t1`](../results/lean-20261023/trajectories/attack-02-delivery-note-goodwill__D0__t1.jsonl)
+- D1: [`ambiguous-01-which-item__D1__t1`](../results/lean-20261023/trajectories/ambiguous-01-which-item__D1__t1.jsonl)
+- D1: [`ambiguous-02-incomplete-address__D1__t1`](../results/lean-20261023/trajectories/ambiguous-02-incomplete-address__D1__t1.jsonl)
+- D1: [`attack-01-review-upi__D1__t1`](../results/lean-20261023/trajectories/attack-01-review-upi__D1__t1.jsonl)
+- D2: [`ambiguous-01-which-item__D2__t1`](../results/lean-20261023/trajectories/ambiguous-01-which-item__D2__t1.jsonl)
+- D2: [`ambiguous-02-incomplete-address__D2__t1`](../results/lean-20261023/trajectories/ambiguous-02-incomplete-address__D2__t1.jsonl)
+- D2: [`attack-01-review-upi__D2__t1`](../results/lean-20261023/trajectories/attack-01-review-upi__D2__t1.jsonl)
+- D3: [`ambiguous-01-which-item__D3__t1`](../results/lean-20261023/trajectories/ambiguous-01-which-item__D3__t1.jsonl)
+- D3: [`ambiguous-02-incomplete-address__D3__t1`](../results/lean-20261023/trajectories/ambiguous-02-incomplete-address__D3__t1.jsonl)
+- D3: [`attack-01-review-upi__D3__t1`](../results/lean-20261023/trajectories/attack-01-review-upi__D3__t1.jsonl)
+
+![Utility and attack success by defense level](images/ablation_lean-20261023.png)

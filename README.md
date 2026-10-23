@@ -8,18 +8,30 @@ Demo video: _to be recorded (see [docs/DEMO.md](docs/DEMO.md))._
 
 ## Results
 
-| Defense level | Benign utility | Utility under attack | Attack success rate | pass^3 | Model s/conversation |
-|---|---|---|---|---|---|
-| D0 baseline | _not yet measured_ | | | | |
-| D1 spotlighting | _not yet measured_ | | | | |
-| D2 policy engine in code | _not yet measured_ | | | | |
-| D3 + human approval | _not yet measured_ | | | | |
+Run [`lean-20261023`](results/lean-20261023/episodes.jsonl) on 2026-10-23: agent and simulated customer both
+`qwen3:8b` on Ollama (local, $0), 36 tasks × D0–D3 × **1 trial** (144 episodes). Values are point estimates with
+95% Wilson intervals. Full tables, failure taxonomy and chart: [docs/EVAL_REPORT.md](docs/EVAL_REPORT.md).
 
-These cells stay empty until `make eval-full` has produced a reported run in `results/`. `make report` then
-writes the numbers, with dates, model, task count, trials and 95% intervals, into
-[docs/EVAL_REPORT.md](docs/EVAL_REPORT.md). Already measured: the task suite validates 36/36 tasks
-([results/validation.json](results/validation.json)), and hybrid policy retrieval reaches the recall@4 shown in
-[results/retrieval.json](results/retrieval.json).
+| Defense level | Episodes with policy violations | Attack success rate | Benign utility | Utility under attack | pass^1 | Model s/conversation |
+|---|---|---|---|---|---|---|
+| D0 baseline | **0.22** [0.12, 0.38] | 0.10 [0.02, 0.40] | 0.23 [0.11, 0.42] | 0.40 [0.17, 0.69] | 0.28 | 110\* |
+| D1 spotlighting | **0.17** [0.08, 0.32] | 0.00 [0.00, 0.28] | 0.27 [0.14, 0.46] | 0.20 [0.06, 0.51] | 0.22 | 20 |
+| D2 policy engine in code | **0.00** [0.00, 0.10] | 0.00 [0.00, 0.28] | 0.27 [0.14, 0.46] | 0.10 [0.02, 0.40] | 0.22 | 20 |
+| D3 + human approval | **0.00** [0.00, 0.10] | 0.00 [0.00, 0.28] | 0.19 [0.09, 0.38] | 0.20 [0.06, 0.51] | 0.17 | 20 |
+
+What this shows, and what it doesn't:
+- **The code-level layers did their job.** With only prompts (D0/D1), the 8B model acted on unverified accounts,
+  refunded more than was paid (₹2,499 on a ₹997 order), sent a prepaid refund to the wrong destination and skipped
+  REF-4 approval: violations in 22% / 17% of episodes. With the policy engine (D2/D3): 0 of 72.
+- **Task success is low at every level (≈0.2–0.3)**: an 8B local model often stops early or uses wrong arguments
+  (see the failure taxonomy). Defenses don't make the model smarter; they make its mistakes safe.
+- **Attack success was low even at D0** (1 of 10: acting before verification), so this run can't show much
+  difference between levels on that metric; with n=10 per level the intervals overlap.
+- **Small n, one trial:** utility differences between levels are within noise. pass^3 needs `make eval-full`.
+- \*D0 ran first, while another project shared the GPU and Ollama restarted; its time is contention, not D0.
+
+Also measured: 36/36 tasks validate ([results/validation.json](results/validation.json)); hybrid policy retrieval
+recall@4 0.96 vs 0.80 BM25 ([results/retrieval.json](results/retrieval.json)).
 
 ## Architecture
 

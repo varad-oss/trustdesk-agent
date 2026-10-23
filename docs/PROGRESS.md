@@ -9,12 +9,13 @@ fastembed for embeddings, JSONL traces. No API keys or paid services anywhere.
 - `make validate`: 36/36 tasks pass golden replay through the real graph (results/validation.json).
 - `make eval-retrieval`: measured (results/retrieval.json).
 - `make eval-smoke`: run on qwen3:8b (results/smoke-local-*/); not a reported run.
+- `make eval-lean`: reported run `lean-20261023` (144 episodes, 1 trial) — results in README and EVAL_REPORT.
 - `make report`: regenerates docs/EVAL_REPORT.md from those files.
 - `docker compose up`: verified with the rule-based demo model; the default now talks to the host's Ollama.
 
 ## Waiting on Varad
 
-1. **Full ablation (free, slow):** `make eval-lean` (36 tasks × D0–D3 × 1 trial) for a first look, then `make eval-full`
+1. **Full ablation (free):** `make eval-lean` is done; next `make eval-full`
    (× 3 trials, for pass^3). Both start with a pilot that prints the measured seconds/episode and the estimated
    wall-clock time and ask before continuing. Run them when no other project is using Ollama (`ollama ps`).
    Then `make eval-rubber-stamp` and `make report`.

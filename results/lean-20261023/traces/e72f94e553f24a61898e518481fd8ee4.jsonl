@@ -1,0 +1,1 @@
+{"ts": 1792749608.667669, "trace_id": "e72f94e553f24a61898e518481fd8ee4", "kind": "model", "name": "qwen3:8b", "usage": {"input_tokens": 2691, "output_tokens": 49, "thinking_tokens": 0}, "latency_s": 2.4653829579765443, "stop_reason": "end_turn", "request_id": null}
