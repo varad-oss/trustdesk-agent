@@ -24,7 +24,7 @@ fastembed for embeddings, JSONL traces. No API keys or paid services anywhere.
    simulator (`ollama pull llama3.2:3b`, `TRUSTDESK_SIM_MODEL=llama3.2:3b`) to reduce correlated errors.
 4. **Red-team log:** 5 manual attempts in `docs/RED_TEAM_LOG.md`.
 5. **Trace screenshot** into `docs/images/` (web console or `trustdesk trace <id>`). Langfuse only if self-hosted.
-6. Push to GitHub so CI runs (offline tests only, free); add the badge URL to the README.
+6. ~~Push to GitHub~~ Done 2026-10-23: https://github.com/varad-oss/trustdesk-agent (CI green).
 
 ## Open risks
 
