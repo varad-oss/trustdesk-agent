@@ -185,6 +185,14 @@ def eval_run(
     cli_run(levels, trials, tasks, limit, concurrency, approver, run_id, reported, yes, resume)
 
 
+@eval_app.command("progress")
+def eval_progress(run_id: str, interval: float = typer.Option(5.0, help="Seconds between refreshes.")) -> None:
+    """Live progress bar, ETA and per-level scoreboard for a running eval (read-only, lightweight)."""
+    from evals.progress import watch
+
+    watch(run_id, interval)
+
+
 @eval_app.command("report")
 def eval_report(run_id: str | None = typer.Option(None, help="Defaults to the latest reported run.")) -> None:
     """Regenerate docs/EVAL_REPORT.md and charts from results/."""

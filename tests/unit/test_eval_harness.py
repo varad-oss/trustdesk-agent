@@ -169,3 +169,13 @@ def test_preflight_reports_unreachable_ollama():
     msg = runner_mod.check_model_server(Settings(ollama_base_url="http://127.0.0.1:9"))
     assert msg and "not reachable" in msg
     assert runner_mod.check_model_server(Settings(provider="fake", simulator_provider="fake")) is None
+
+
+def test_progress_snapshot(tmp_path, monkeypatch):
+    from evals import progress
+
+    monkeypatch.setattr(runner_mod, "RESULTS_DIR", tmp_path)
+    sim = lambda: ScriptedModel([[{"type": "text", "text": "hi ###STOP###"}]])  # noqa: E731
+    out = runner_mod.run(load_tasks()[:2], runner_mod.RunConfig("p1", [0, 2], 1), RuleBasedDemoModel, sim, PolicyIndex.from_policy())
+    text = progress.snapshot(out)
+    assert "4/4" in text and "D0" in text and "D2" in text and "s/episode" in text
