@@ -1,7 +1,7 @@
 # TrustDesk — notes for Claude Code
 
-Policy-bound support agent for the fictional store ShopSetu. Spec: `docs/SPEC.md`. Plan: `docs/PLAN.md`.
-Status and next steps: `docs/PROGRESS.md`. Decisions: `docs/DECISIONS.md`.
+Policy-bound support agent for the fictional store ShopSetu. Spec: `docs/project/SPEC.md`. Plan: `docs/project/PLAN.md`.
+Status and next steps: `docs/project/PROGRESS.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Commands
 - Setup: `uv sync --all-extras` (Python 3.12 via uv)

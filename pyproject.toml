@@ -1,7 +1,16 @@
 [project]
 name = "trustdesk"
 version = "0.1.0"
-description = "A policy-bound customer-support agent with human approval, measured prompt-injection defenses and a tau-bench-style eval harness."
+description = "A policy-bound customer-support agent with human approval, measured prompt-injection defenses and a tau-bench-style eval harness. Runs locally on Ollama."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["llm-agents", "langgraph", "prompt-injection", "ai-safety", "evaluation", "human-in-the-loop", "ollama"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Development Status :: 3 - Alpha",
+]
 authors = [
     { name = "Varad Rajiv Pandare", email = "varadpandare.24@kgpian.iitkgp.ac.in" }
 ]
@@ -22,6 +31,10 @@ dependencies = [
     "typer>=0.27",
     "uvicorn>=0.54",
 ]
+
+[project.urls]
+Repository = "https://github.com/varad-oss/trustdesk-agent"
+"Evaluation report" = "https://github.com/varad-oss/trustdesk-agent/blob/main/docs/EVAL_REPORT.md"
 
 [project.optional-dependencies]
 langfuse = [

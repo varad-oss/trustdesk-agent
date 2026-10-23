@@ -16,7 +16,7 @@ fastembed for embeddings, JSONL traces. No API keys or paid services anywhere.
 - `make eval-full`: reported run `full-20261023` (432 episodes, 3 trials) — README table and EVAL_REPORT.
   Re-run detached any time: `make eval-detached RUN=<id> LEVELS=0,1,2,3 TRIALS=3`; watch with `make progress RUN=<id>`.
 
-## Waiting on Varad
+## Open items
 
 1. **Rubber-stamp run (free, ~20 min):** `make eval-rubber-stamp`, then `make report`, when Ollama is free.
 2. **Review the tasks** in `evals/tasks/` and the 25 retrieval questions in `evals/retrieval_qa.yaml`.
