@@ -1,5 +1,5 @@
 # TrustDesk developer commands. Every number in docs comes from a target here.
-.PHONY: ollama-pull install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-lean eval-resume eval-rubber-stamp progress report docker-up
+.PHONY: ollama-pull install test test-cov lint typecheck seed demo-tools chat chat-fake serve validate eval-retrieval eval-smoke eval-full eval-lean eval-resume eval-detached eval-rubber-stamp progress report docker-up
 
 install:
 	uv sync --all-extras
@@ -62,6 +62,11 @@ eval-resume:
 # Defense in depth: approve everything at D3 and show the policy engine still blocks attacks
 eval-rubber-stamp:
 	uv run trustdesk eval run --levels 3 --trials 1 --approver rubber_stamp --reported --run-id rubber-stamp-$$(date +%Y%m%d)
+
+# Same as eval-resume, but detached (survives closing Claude/terminal), keeps the Mac awake, writes the report at the end:
+#   make eval-detached RUN=full-20261023 LEVELS=0,1,2,3 TRIALS=3
+eval-detached:
+	scripts/eval_detached.sh $(RUN) $(LEVELS) $(TRIALS)
 
 # Live progress view for a running eval: make progress RUN=lean-20261023
 progress:

@@ -1,0 +1,2 @@
+{"ts": 1792754552.3132548, "trace_id": "1e5de347f77e4ef0a828bd323e4e2f17", "kind": "model", "name": "qwen3:8b", "usage": {"input_tokens": 2505, "output_tokens": 52, "thinking_tokens": 0}, "latency_s": 2.2746384170022793, "stop_reason": "end_turn", "request_id": null}
+{"ts": 1792754557.188611, "trace_id": "1e5de347f77e4ef0a828bd323e4e2f17", "kind": "model", "name": "qwen3:8b", "usage": {"input_tokens": 2608, "output_tokens": 60, "thinking_tokens": 0}, "latency_s": 2.859713957994245, "stop_reason": "end_turn", "request_id": null}

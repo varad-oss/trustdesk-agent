@@ -1,0 +1,3 @@
+{"ts": 1792753014.896471, "trace_id": "04b84537587d4f4f81c9d8c498d9fbd7", "kind": "model", "name": "qwen3:8b", "usage": {"input_tokens": 2518, "output_tokens": 37, "thinking_tokens": 0}, "latency_s": 1.8044833750172984, "stop_reason": "tool_use", "request_id": null}
+{"ts": 1792753014.899549, "trace_id": "04b84537587d4f4f81c9d8c498d9fbd7", "kind": "tool", "name": "find_and_verify_customer", "input": {"email": "customer@example.com", "order_id": "SS-15006"}, "ok": true, "error_code": null, "result_chars": 118}
+{"ts": 1792753017.083413, "trace_id": "04b84537587d4f4f81c9d8c498d9fbd7", "kind": "model", "name": "qwen3:8b", "usage": {"input_tokens": 2593, "output_tokens": 46, "thinking_tokens": 0}, "latency_s": 2.1829908340005204, "stop_reason": "end_turn", "request_id": null}
