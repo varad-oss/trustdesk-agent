@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Video course: a free 2 h 18 min course that teaches agentic AI from scratch by taking TrustDesk apart, linked from
+  the README with chapter timestamps.
+- Web console redesign: defence-level stepper that explains each level, held actions shown as approval slips (amount,
+  rule, the agent's justification, the conversation so far), session details (verified customer, model calls,
+  tokens), model status, sample conversations, a working-indicator with elapsed time, dark mode and a phone layout.
+- Fix: the rule-based demo model captured a sentence's trailing full stop as part of an email address, so
+  verification failed and the attack demo looped when run with `TRUSTDESK_PROVIDER=fake`.
+
 ## v0.1.0 — 2026-10-23
 
 First public release.

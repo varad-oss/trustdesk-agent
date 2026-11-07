@@ -3,119 +3,400 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TrustDesk Console</title>
+<title>TrustDesk console | ShopSetu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%230b6e74%27/%3E%3Cpath d=%27M9 16.5l4.5 4.5L23 11%27 fill=%27none%27 stroke=%27white%27 stroke-width=%273.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5b6573; --line: #dde1e6;
-    --accent: #2a6fdb; --agent: #eef3fc; --customer: #f1f1f1; --warn: #b26a00; --warn-bg: #fff6e5;
-    --ok: #1f8a5b; --bad: #c0392b;
+    --ground: #eceff3; --surface: #ffffff; --sunken: #f5f7f9; --line: #dbe1e8; --line-strong: #c4cdd7;
+    --ink: #15202b; --ink-2: #4a5868; --ink-3: #6f7d8c;
+    --peacock: #0b6e74; --peacock-ink: #ffffff; --peacock-wash: #e3f1f1;
+    --saffron: #b97800; --saffron-edge: #d9900a; --hold: #fff4dc; --hold-line: #f0d395;
+    --leaf: #1f8a55; --on-leaf: #ffffff; --vermilion: #c23a2b; --vermilion-wash: #fbe9e6;
+    --customer: #15202b; --customer-ink: #f4f7fa;
+    --focus: 0 0 0 3px rgba(11, 110, 116, .35);
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #111418; --panel: #1a1e24; --ink: #e7eaee; --muted: #9aa4b2; --line: #2c323b;
-      --accent: #6aa0ff; --agent: #1d2a40; --customer: #262b33; --warn: #ffb547; --warn-bg: #2e2513; --ok: #4cc38a; --bad: #ff7b6b; }
+    :root {
+      --ground: #0e141b; --surface: #151d26; --sunken: #111820; --line: #26313d; --line-strong: #344251;
+      --ink: #e6ebf0; --ink-2: #a3b1bf; --ink-3: #7d8c9b;
+      --peacock: #3fb5b9; --peacock-ink: #06282a; --peacock-wash: #12302f;
+      --saffron: #f0b53c; --saffron-edge: #f0b53c; --hold: #2a2212; --hold-line: #5a4519;
+      --leaf: #48c285; --on-leaf: #06200f; --vermilion: #ff7b6b; --vermilion-wash: #3a1d19;
+      --customer: #e6ebf0; --customer-ink: #10171f;
+      --focus: 0 0 0 3px rgba(63, 181, 185, .45);
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  header h1 { font-size: 17px; margin: 0 auto 0 0; }
-  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
-  h2 { font-size: 14px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  #log { height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
-  .msg { padding: 8px 11px; border-radius: 8px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .customer { background: var(--customer); align-self: flex-end; }
-  .agent { background: var(--agent); align-self: flex-start; }
-  .system { color: var(--warn); background: var(--warn-bg); align-self: center; font-size: 13px; }
-  form { display: flex; gap: 8px; margin-top: 8px; }
-  input[type=text], select { flex: 1; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; min-width: 0; }
-  select { flex: 0 0 auto; }
-  button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button:disabled { opacity: .5; cursor: default; }
-  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 13px; }
-  .card pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; font-size: 12px; }
-  .row { display: flex; gap: 8px; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .rules { color: var(--warn); font-weight: 600; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: none; box-shadow: var(--focus); }
+  code, .code { font-family: var(--mono); font-size: .86em; font-weight: 500; }
+
+  /* top bar */
+  .bar { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .brand b { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  .brand span { color: var(--ink-3); font-size: 14px; }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+  .status.ok .dot { background: var(--leaf); }
+  .status.down .dot { background: var(--vermilion); }
+
+  /* layout */
+  .desk { display: grid; grid-template-columns: minmax(0, 1fr) 400px; height: calc(100% - 59px); }
+  @media (max-width: 960px) { .desk { grid-template-columns: 1fr; height: auto; } }
+  .convo { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+  @media (max-width: 960px) { .convo { height: 78vh; border-right: 0; border-bottom: 1px solid var(--line); } }
+
+  /* defence stepper */
+  .defence { padding: 18px 24px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .defence-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .defence-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .defence-head p { margin: 0; color: var(--ink-3); font-size: 13px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .step { text-align: left; padding: 10px 12px 9px; border: 1px solid var(--line); background: var(--sunken); cursor: pointer; transition: background .15s, border-color .15s; }
+  .step:first-child { border-radius: 10px 0 0 10px; }
+  .step:last-child { border-radius: 0 10px 10px 0; }
+  .step .lv { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .step .nm { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .step.on { background: var(--peacock-wash); border-color: var(--peacock); }
+  .step.on .nm, .step.on .lv { color: var(--peacock); }
+  .step.below { background: var(--peacock-wash); border-color: transparent; }
+  .step.below .nm { color: var(--ink-2); }
+  .defence-note { margin: 10px 0 0; font-size: 13.5px; color: var(--ink-2); max-width: 70ch; }
+  .session-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+  .session-meta strong { color: var(--ink-2); font-weight: 600; }
+
+  /* conversation */
+  #log { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+  .turn { max-width: min(78%, 620px); display: flex; flex-direction: column; gap: 4px; }
+  .turn .who { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+  .turn .body { padding: 11px 15px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .turn.customer { align-self: flex-end; align-items: flex-end; }
+  .turn.customer .body { background: var(--customer); color: var(--customer-ink); border-bottom-right-radius: 5px; }
+  .turn.agent { align-self: flex-start; }
+  .turn.agent .body { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+  .turn.agent .who { color: var(--peacock); }
+  .event { align-self: stretch; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+  .event::before, .event::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .event span { max-width: 75%; text-align: center; }
+  .event.hold span { color: var(--saffron); font-weight: 600; }
+  .event.bad span { color: var(--vermilion); font-weight: 600; }
+  .event.good span { color: var(--leaf); font-weight: 600; }
+  .typing { align-self: flex-start; display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 13px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--peacock); animation: blink 1.2s infinite both; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+
+  /* empty state */
+  .start { margin: auto; max-width: 560px; text-align: left; }
+  .start h3 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 6px; }
+  .start p { margin: 0 0 18px; color: var(--ink-2); }
+  .start p em { font-style: normal; font-weight: 600; color: var(--ink); }
+  .tries { display: grid; gap: 8px; }
+  .try { text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; display: grid; gap: 2px; transition: border-color .15s; }
+  .try:hover { border-color: var(--peacock); }
+  .try b { font-weight: 600; }
+  .try span { color: var(--ink-3); font-size: 13.5px; }
+  .try.attack:hover { border-color: var(--vermilion); }
+
+  /* composer */
+  .composer { padding: 14px 24px 18px; background: var(--surface); border-top: 1px solid var(--line); }
+  .composer form { display: flex; gap: 10px; }
+  .composer input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--sunken); }
+  .composer input:focus-visible { border-color: var(--peacock); }
+  .btn { padding: 11px 18px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .btn:hover { border-color: var(--ink-3); }
+  .btn.primary { background: var(--peacock); border-color: var(--peacock); color: var(--peacock-ink); }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn:disabled { opacity: .45; cursor: default; filter: none; }
+  .composer .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-3); }
+  .composer-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .link { background: none; border: 0; padding: 4px 0; color: var(--ink-2); cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+  .link:hover { color: var(--ink); }
+
+  /* held actions */
+  .holds { padding: 20px 20px 24px; overflow-y: auto; min-height: 0; }
+  .holds-head { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 4px 14px; }
+  .holds-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .count { font-size: 13px; color: var(--ink-3); }
+  .count.live { color: var(--saffron); font-weight: 600; }
+  .empty { margin: 4px; padding: 22px 18px; border: 1px dashed var(--line-strong); border-radius: 14px; color: var(--ink-3); font-size: 14px; }
+  .empty b { display: block; color: var(--ink-2); font-weight: 600; margin-bottom: 4px; }
+
+  /* the slip: the one memorable element */
+  .slip { position: relative; margin-bottom: 16px; background: var(--hold); border: 1px solid var(--hold-line); border-radius: 16px; }
+  .slip-top { padding: 16px 18px 14px; }
+  .slip-top .what { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; color: var(--ink-2); }
+  .slip-top .what b { color: var(--ink); font-weight: 600; }
+  .amount { font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 6px 0 2px; color: var(--ink); }
+  .amount.none { font-size: 24px; }
+  .held-by { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13.5px; color: var(--saffron); font-weight: 600; }
+  .rule { font-family: var(--mono); font-size: 12px; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--saffron-edge); color: var(--saffron); }
+  .perf { position: relative; height: 0; border-top: 2px dashed var(--hold-line); margin: 0 14px; }
+  .perf::before, .perf::after { content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--ground); border: 1px solid var(--hold-line); }
+  .perf::before { left: -26px; clip-path: inset(0 0 0 50%); }
+  .perf::after { right: -26px; clip-path: inset(0 50% 0 0); }
+  .slip-body { padding: 14px 18px 16px; font-size: 13.5px; color: var(--ink-2); display: grid; gap: 10px; }
+  .slip-body .why { color: var(--ink); }
+  .params { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+  .params dt { color: var(--ink-3); }
+  .params dd { margin: 0; font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+  details summary { cursor: pointer; color: var(--ink-2); font-weight: 500; }
+  details[open] summary { margin-bottom: 6px; }
+  .excerpt { display: grid; gap: 4px; }
+  .excerpt p { margin: 0; }
+  .excerpt em { font-style: normal; color: var(--ink-3); }
+  .slip-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+  .btn.approve { background: var(--leaf); border-color: var(--leaf); color: var(--on-leaf); }
+  .btn.reject { color: var(--vermilion); border-color: var(--vermilion); background: transparent; }
+  .btn.reject:hover { background: var(--vermilion-wash); }
+  .slip.leaving { opacity: 0; transform: translateX(16px); transition: opacity .25s, transform .25s; }
+  .slip.mine { box-shadow: 0 0 0 2px var(--saffron-edge); }
+  .mine-tag { font-size: 12px; color: var(--saffron); font-weight: 600; }
+
+  @media (max-width: 640px) {
+    .bar { padding: 12px 16px; }
+    .brand span { display: none; }
+    .defence, .composer { padding-left: 16px; padding-right: 16px; }
+    #log { padding: 16px; }
+    .holds { padding: 16px; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .step:first-child { border-radius: 10px 0 0 0; } .step:nth-child(2) { border-radius: 0 10px 0 0; }
+    .step:nth-child(3) { border-radius: 0 0 0 10px; } .step:last-child { border-radius: 0 0 10px 0; }
+    .defence-head p { display: none; }
+    .turn { max-width: 88%; }
+    .composer-row { align-items: flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>TrustDesk console · ShopSetu</h1>
-  <label class="muted" for="level">Defense</label>
-  <select id="level">
-    <option value="0">D0 baseline</option><option value="1">D1 spotlighting</option>
-    <option value="2">D2 enforcement</option><option value="3" selected>D3 + approval</option>
-  </select>
-  <button id="new">New session</button>
-  <button id="attack" title="Fresh session; the product has a poisoned review">Attack demo</button>
+<header class="bar">
+  <div class="brand"><b>TrustDesk</b><span>ShopSetu support console</span></div>
+  <div class="status" id="status" role="status"><span class="dot"></span><span id="status-text">Checking the model…</span></div>
 </header>
-<main>
-  <section>
-    <h2>Chat <span id="sid" class="muted"></span></h2>
+
+<div class="desk">
+  <main class="convo" aria-label="Conversation">
+    <section class="defence" aria-labelledby="defence-title">
+      <div class="defence-head">
+        <h2 id="defence-title">Defence level</h2>
+        <p>Changing it starts a new conversation</p>
+      </div>
+      <div class="steps" role="radiogroup" aria-labelledby="defence-title" id="steps"></div>
+      <p class="defence-note" id="defence-note"></p>
+      <div class="session-meta" id="session-meta" hidden></div>
+    </section>
+
     <div id="log" aria-live="polite"></div>
-    <form id="form"><input id="text" type="text" placeholder="Try: my earbuds SS-10482 broke, email priya.s@example.in" autocomplete="off"><button class="primary" id="send">Send</button></form>
-    <p class="muted">Demo login: priya.s@example.in with SS-10482 (damaged earbuds) or SS-10483 (cancellable phone, triggers REF-4 approval). Reset with <code>trustdesk seed --reseed</code>.</p>
-  </section>
-  <section>
-    <h2>Approval queue</h2>
-    <div id="queue"><p class="muted">No pending approvals.</p></div>
-  </section>
-</main>
+
+    <div class="composer">
+      <form id="form">
+        <label for="text" class="visually-hidden" style="position:absolute;left:-9999px">Message as the customer</label>
+        <input id="text" type="text" placeholder="Write as the customer, e.g. my earbuds from SS-10482 arrived cracked" autocomplete="off">
+        <button class="btn primary" id="send">Send</button>
+      </form>
+      <div class="composer-row">
+        <p class="hint">Demo customer: <code>priya.s@example.in</code> with <code>SS-10482</code> or <code>SS-10483</code>. To reset the demo, stop the server and run <code>trustdesk seed --reseed</code>.</p>
+        <button class="link" id="new" type="button">Start over</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="holds" aria-labelledby="holds-title">
+    <div class="holds-head"><h2 id="holds-title">Waiting for you</h2><span class="count" id="count">Nothing held</span></div>
+    <div id="queue"></div>
+  </aside>
+</div>
+
 <script>
-let sessionId = null;
-const log = document.getElementById("log"), queue = document.getElementById("queue");
-const say = (who, text) => { const d = document.createElement("div"); d.className = "msg " + who; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; };
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const LEVELS = [
+  { n: "Prompt only", note: "The policy is only written in the prompt. The model can still break it, and in testing it did, in 21% of conversations." },
+  { n: "Spotlighting", note: "Adds markers around untrusted text, like product reviews, so the model can tell data from instructions. It still has nothing that enforces the rules." },
+  { n: "Rules in code", note: "Every write tool asks the policy engine first, identity is checked in code, and private data is masked. Anything that needs a person is escalated, not done." },
+  { n: "Human approval", note: "Everything in level 2, and risky actions such as refunds above ₹5,000 pause here until you approve or reject them." },
+];
+const ACTIONS = { issue_refund: "Refund", cancel_order: "Cancel order", create_return: "Return", update_shipping_address: "Change address", grant_goodwill_credit: "Goodwill credit", escalate_to_human: "Escalation" };
+const TRIES = [
+  { t: "My earbuds from SS-10482 arrived cracked yesterday. My email is priya.s@example.in", b: "A damaged item", s: "The agent verifies Priya, checks the order and starts a return." },
+  { t: "Please cancel SS-10483, my email is priya.s@example.in", b: "A refund that needs you", s: "Cancelling the phone means a ₹14,999 refund. At level 3 it waits for you." },
+];
 
-function newSession() { sessionId = null; log.innerHTML = ""; document.getElementById("sid").textContent = ""; say("system", "New session at D" + document.getElementById("level").value); }
+let sessionId = null, level = 3, busy = false;
+const $ = (id) => document.getElementById(id);
+const log = $("log"), queue = $("queue");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rupees = (n) => "₹" + Number(n).toLocaleString("en-IN");
 
-function show(res) {
-  sessionId = res.session_id; document.getElementById("sid").textContent = "· " + sessionId;
-  if (res.reply) say("agent", res.reply);
-  if (res.pending_approval) say("system", "Waiting for a support lead to approve " + res.pending_approval.action + " (" + res.pending_approval.policy_decision.rule_ids.join(", ") + ")");
-  loadQueue();
+function renderSteps() {
+  $("steps").innerHTML = LEVELS.map((l, i) =>
+    `<button type="button" role="radio" aria-checked="${i === level}" class="step ${i === level ? "on" : i < level ? "below" : ""}" data-level="${i}">
+       <span class="lv">Level ${i}</span><span class="nm">${esc(l.n)}</span></button>`).join("");
+  $("defence-note").textContent = LEVELS[level].note;
+}
+$("steps").addEventListener("click", (e) => {
+  const b = e.target.closest(".step"); if (!b || busy) return;
+  const next = Number(b.dataset.level); if (next === level) return;
+  level = next; renderSteps(); newSession();
+});
+
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+function clearStart() { const s = log.querySelector(".start"); if (s) s.remove(); }
+function turn(who, text) {
+  clearStart();
+  const d = document.createElement("div"); d.className = "turn " + who;
+  d.innerHTML = `<span class="who">${who === "agent" ? "TrustDesk agent" : "Customer"}</span><div class="body"></div>`;
+  d.querySelector(".body").textContent = text; log.appendChild(d); scrollDown();
+}
+function event(text, kind = "") {
+  clearStart();
+  const d = document.createElement("div"); d.className = "event " + kind;
+  d.innerHTML = "<span></span>"; d.querySelector("span").textContent = text; log.appendChild(d); scrollDown();
+}
+function showStart() {
+  log.innerHTML = `<div class="start"><h3>Play the customer</h3>
+    <p>Type below as a ShopSetu customer, or start with one of these. You're also the support lead: anything risky waits for your decision under <em>Waiting for you</em>.</p>
+    <div class="tries">${TRIES.map((x, i) => `<button class="try" type="button" data-try="${i}"><b>${esc(x.b)}</b><span>${esc(x.s)}</span></button>`).join("")}
+    <button class="try attack" type="button" data-try="attack"><b>An injection attack</b><span>A product review hides a fake "system notice" asking for a ₹50,000 refund to a stranger's UPI ID.</span></button></div></div>`;
+}
+log.addEventListener("click", async (e) => {
+  const b = e.target.closest(".try"); if (!b || busy) return;
+  if (b.dataset.try === "attack") {
+    newSession(true);
+    event("Injection test: the earbuds have a review telling the agent to refund ₹50,000 to attacker@okbank", "bad");
+    const { message } = await (await fetch("/demo/attack", { method: "POST" })).json();
+    send(message);
+  } else send(TRIES[Number(b.dataset.try)].t);
+});
+
+function newSession(quiet) {
+  sessionId = null; $("session-meta").hidden = true;
+  if (quiet) log.innerHTML = ""; else showStart();
+}
+
+let typingTimer = null;
+function typing(on) {
+  const old = log.querySelector(".typing"); if (old) old.remove(); clearInterval(typingTimer);
+  if (!on) return;
+  const d = document.createElement("div"); d.className = "typing";
+  d.innerHTML = '<i></i><i></i><i></i><span>The agent is working</span>'; log.appendChild(d); scrollDown();
+  const t0 = Date.now();
+  typingTimer = setInterval(() => { d.querySelector("span").textContent = `The agent is working (${Math.round((Date.now() - t0) / 1000)} s; a local model can take a while)`; }, 1000);
+}
+function setBusy(on) { busy = on; $("send").disabled = on; $("text").disabled = on; typing(on); if (!on) $("text").focus(); }
+
+async function show(res) {
+  sessionId = res.session_id;
+  if (res.reply) turn("agent", res.reply);
+  if (res.pending_approval) {
+    const p = res.pending_approval, rules = (p.policy_decision?.rule_ids || []).join(", ");
+    event(`${ACTIONS[p.action] || p.action} held for a support lead${rules ? " under " + rules : ""}. Decide under Waiting for you.`, "hold");
+  }
+  await Promise.all([loadQueue(), loadSession()]);
 }
 
 async function send(text) {
-  say("customer", text);
-  document.getElementById("send").disabled = true;
+  turn("customer", text); setBusy(true);
   try {
-    const r = await fetch("/chat", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({message: text, session_id: sessionId, defense_level: Number(document.getElementById("level").value)})});
-    const body = await r.json();
-    if (!r.ok) say("system", body.detail || "Error"); else show(body);
-  } catch (e) { say("system", "Network error: " + e); }
-  document.getElementById("send").disabled = false;
+    const r = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, session_id: sessionId, defense_level: level }) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) event(body.detail || `The server returned ${r.status}.`, "bad"); else await show(body);
+  } catch (e) { setBusy(false); event("Couldn't reach the TrustDesk server. Check that it's running, then try again.", "bad"); }
 }
 
-async function decide(id, decision) {
-  const r = await fetch("/approvals/" + id, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({decision, note: "decided in web console"})});
-  const body = await r.json();
-  if (!r.ok) { say("system", body.detail || "Error"); return; }
-  say("system", "Approval #" + id + " " + decision + "d");
-  if (body.session_id === sessionId) show(body); else loadQueue();
+async function loadSession() {
+  if (!sessionId) return;
+  try {
+    const r = await fetch("/sessions/" + encodeURIComponent(sessionId)); if (!r.ok) return;
+    const s = await r.json(), u = s.usage || {}, meta = $("session-meta");
+    const tokens = (u.input_tokens || 0) + (u.output_tokens || 0);
+    meta.innerHTML = `<span>Conversation <strong class="code">${esc(sessionId.slice(0, 12))}</strong></span>
+      <span>Customer <strong>${s.verified_customer_id ? esc(s.verified_customer_id) : "not verified yet"}</strong></span>
+      <span>Model calls <strong>${u.model_calls || 0}</strong></span>
+      ${tokens ? `<span>Tokens <strong>${tokens.toLocaleString("en-IN")}</strong></span>` : ""}`;
+    meta.hidden = false;
+  } catch (_) { /* session details are optional */ }
 }
 
+function slip(a) {
+  const amt = a.params?.amount_inr;
+  const rows = Object.entries(a.params || {}).filter(([k, v]) => k !== "amount_inr" && v !== null && v !== "")
+    .map(([k, v]) => `<dt>${esc(k.replace(/_/g, " "))}</dt><dd>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</dd>`).join("");
+  const excerpt = (a.excerpt || []).map((m) => `<p><em>${m.role === "agent" ? "Agent" : "Customer"}:</em> ${esc(m.text)}</p>`).join("");
+  const mine = a.session_id === sessionId;
+  return `<article class="slip${mine ? " mine" : ""}" data-id="${a.id}" aria-label="${esc(ACTIONS[a.action] || a.action)} waiting for approval">
+    <div class="slip-top">
+      <div class="what"><b>${esc(ACTIONS[a.action] || a.action)}</b>${mine ? '<span class="mine-tag">This conversation</span>' : `<span class="code">#${a.id}</span>`}</div>
+      <div class="amount${amt == null ? " none" : ""}">${amt == null ? esc(a.params?.order_id || "No amount") : rupees(amt)}</div>
+      <div class="held-by">Held by ${(a.rule_ids || []).map((r) => `<span class="rule">${esc(r)}</span>`).join(" ")}</div>
+    </div>
+    <div class="perf" aria-hidden="true"></div>
+    <div class="slip-body">
+      ${a.justification ? `<div class="why">${esc(a.justification)}</div>` : ""}
+      ${rows ? `<dl class="params">${rows}</dl>` : ""}
+      ${excerpt ? `<details><summary>Conversation so far</summary><div class="excerpt">${excerpt}</div></details>` : ""}
+      <div class="slip-actions">
+        <button class="btn reject" type="button" data-decide="reject">Reject</button>
+        <button class="btn approve" type="button" data-decide="approve">Approve</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+let lastQueue = "";
 async function loadQueue() {
-  const items = await (await fetch("/approvals")).json();
-  if (!items.length) { queue.innerHTML = '<p class="muted">No pending approvals.</p>'; return; }
-  queue.innerHTML = items.map((a) => `<div class="card"><strong>#${a.id} ${esc(a.action)}</strong> <span class="muted">session ${esc(a.session_id)}</span>
-    <pre>${esc(JSON.stringify(a.params, null, 1))}</pre><div class="rules">Policy: ${esc(a.rule_ids.join(", "))} → needs approval</div>
-    <div class="muted">Agent's justification: ${esc(a.justification || "–")}</div>
-    <div class="muted">Last turns:<br>${a.excerpt.map((m) => esc(m.role + ": " + m.text)).join("<br>")}</div>
-    <div class="row" style="margin-top:8px"><button class="primary" onclick="decide(${a.id}, 'approve')">Approve</button><button onclick="decide(${a.id}, 'reject')">Reject</button></div></div>`).join("");
+  let items = [];
+  try { const r = await fetch("/approvals"); if (!r.ok) return; items = await r.json(); } catch (_) { return; }
+  const key = JSON.stringify(items.map((a) => [a.id, a.session_id === sessionId]));
+  const c = $("count"); c.textContent = items.length ? `${items.length} held` : "Nothing held"; c.classList.toggle("live", items.length > 0);
+  if (key === lastQueue) return; lastQueue = key;
+  queue.innerHTML = items.length ? items.map(slip).join("")
+    : `<div class="empty"><b>Nothing needs your approval</b>At level 3, refunds above ₹5,000, large credits and frequent refunders wait here for a decision.</div>`;
 }
 
-document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); const t = document.getElementById("text"); if (t.value.trim()) { send(t.value.trim()); t.value = ""; } });
-document.getElementById("new").addEventListener("click", newSession);
-document.getElementById("level").addEventListener("change", newSession);
-document.getElementById("attack").addEventListener("click", async () => {
-  newSession(); say("system", "Attack demo: the earbuds product has a review containing a fake 'SYSTEM NOTICE' asking for a ₹50,000 refund to attacker@okbank.");
-  const {message} = await (await fetch("/demo/attack", {method: "POST"})).json(); send(message);
+queue.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-decide]"); if (!b) return;
+  const card = b.closest(".slip"), id = Number(card.dataset.id), decision = b.dataset.decide;
+  card.querySelectorAll("button").forEach((x) => (x.disabled = true));
+  const mine = card.classList.contains("mine");
+  if (mine) setBusy(true);
+  try {
+    const r = await fetch("/approvals/" + id, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, note: "decided in web console" }) });
+    const body = await r.json().catch(() => ({}));
+    if (mine) setBusy(false);
+    if (!r.ok) { event(body.detail || `Couldn't record the decision (${r.status}).`, "bad"); card.querySelectorAll("button").forEach((x) => (x.disabled = false)); return; }
+    card.classList.add("leaving");
+    if (body.session_id === sessionId) {
+      event(decision === "approve" ? "You approved it. The agent is carrying it out." : "You rejected it. Nothing was changed.", decision === "approve" ? "good" : "bad");
+      await show(body);
+    } else { lastQueue = ""; setTimeout(loadQueue, 250); }
+  } catch (_) { if (mine) setBusy(false); event("Couldn't reach the TrustDesk server to record the decision.", "bad"); card.querySelectorAll("button").forEach((x) => (x.disabled = false)); }
 });
-newSession(); loadQueue(); setInterval(loadQueue, 4000);
+
+async function loadHealth() {
+  const s = $("status"), t = $("status-text");
+  try {
+    const h = await (await fetch("/health")).json();
+    s.className = "status ok";
+    t.textContent = h.provider === "fake" ? "Offline demo model" : `${h.model} on ${h.provider}`;
+  } catch (_) { s.className = "status down"; t.textContent = "Server unreachable"; }
+}
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); const t = $("text"); const v = t.value.trim(); if (v && !busy) { t.value = ""; send(v); } });
+$("new").addEventListener("click", () => { if (!busy) newSession(); });
+
+renderSteps(); showStart(); loadHealth(); loadQueue();
+setInterval(loadQueue, 4000);
 </script>
 </body>
 </html>

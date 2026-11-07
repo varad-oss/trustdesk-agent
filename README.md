@@ -15,8 +15,46 @@
 
 <p align="center">
   <img src="docs/images/console-approval.png" width="860" alt="TrustDesk console: a ₹14,999 refund waits in the human approval queue under rule REF-4">
-  <br/><sub>The web console: the agent cancelled an order and prepared a ₹14,999 refund; policy rule REF-4 routes it to a human first.</sub>
+  <br/><sub>The web console: the agent cancelled an order and prepared a ₹14,999 refund; policy rule REF-4 holds it until a support lead approves or rejects it.</sub>
 </p>
+
+## Video course
+
+<p align="center">
+  <a href="https://youtu.be/4qP-JYwR2k4"><img src="docs/images/course-thumbnail.png" width="640" alt="Agentic AI Full Course: how AI agents really work, built around TrustDesk"></a>
+</p>
+
+**[Agentic AI Full Course, built around TrustDesk](https://youtu.be/4qP-JYwR2k4)**: a free 2 h 18 min course that teaches agentic AI from
+the very basics by taking TrustDesk apart: what a language model is, prompts and the context window, tool use, the
+agent loop, guardrails as code, state and checkpoints, human approval and idempotency, retrieval, prompt injection,
+evaluation with error analysis, and the four agentic design patterns. Each chapter has worked examples you can check
+by hand and quizzes, and every number shown comes from this repository's `results/`.
+
+To follow along, run TrustDesk yourself (`make chat-fake` chats in the terminal with no model at all;
+`TRUSTDESK_PROVIDER=fake make serve` opens the web console) and read the code in the course's order:
+`agent/model.py` → `tools/registry.py` → `agent/graph.py` → `policy_engine.py` → `agent/runtime.py` → `evals/`.
+
+<details>
+<summary>Chapters</summary>
+
+| Starts | Chapter |
+|---|---|
+| [0:00](https://youtu.be/4qP-JYwR2k4?t=0) | Welcome |
+| [3:59](https://youtu.be/4qP-JYwR2k4?t=239) | What a language model is |
+| [13:29](https://youtu.be/4qP-JYwR2k4?t=809) | Talking to a model |
+| [24:09](https://youtu.be/4qP-JYwR2k4?t=1449) | Tool use |
+| [34:59](https://youtu.be/4qP-JYwR2k4?t=2099) | The agent loop |
+| [46:17](https://youtu.be/4qP-JYwR2k4?t=2777) | Guardrails |
+| [59:08](https://youtu.be/4qP-JYwR2k4?t=3548) | State and memory |
+| [1:07:55](https://youtu.be/4qP-JYwR2k4?t=4075) | Humans in the loop |
+| [1:18:10](https://youtu.be/4qP-JYwR2k4?t=4690) | Retrieval |
+| [1:26:58](https://youtu.be/4qP-JYwR2k4?t=5218) | Prompt injection |
+| [1:36:51](https://youtu.be/4qP-JYwR2k4?t=5811) | Evaluation |
+| [1:49:52](https://youtu.be/4qP-JYwR2k4?t=6592) | The four agentic design patterns |
+| [1:59:56](https://youtu.be/4qP-JYwR2k4?t=7196) | Agentic AI: the complete picture |
+| [2:08:49](https://youtu.be/4qP-JYwR2k4?t=7729) | TrustDesk: the complete picture |
+
+</details>
 
 ## Why
 
@@ -95,7 +133,7 @@ docker compose up --build       # then open http://localhost:8000
 ```
 
 Log in as `priya.s@example.in` with order `SS-10482` (damaged earbuds) or `SS-10483` (a cancellation that needs
-approval), or press **Attack demo**. No Ollama? `TRUSTDESK_PROVIDER=fake docker compose up` runs a rule-based stand-in
+approval), or pick **An injection attack** to see a poisoned product review try to redirect a refund. No Ollama? `TRUSTDESK_PROVIDER=fake docker compose up` runs a rule-based stand-in
 (not an LLM).
 
 Without Docker ([uv](https://docs.astral.sh/uv/) required):

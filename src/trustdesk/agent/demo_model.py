@@ -17,7 +17,7 @@ from typing import Any
 from trustdesk.agent.model import CachedModel, ChatModel, ModelResponse, OllamaModel, OpenAICompatModel
 from trustdesk.config import Settings
 
-EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")  # no trailing "." from the end of a sentence
 PHONE_RE = re.compile(r"\b[6-9]\d{9}\b")
 ORDER_RE = re.compile(r"\bSS-\d{4,6}\b", re.IGNORECASE)
 DAMAGE_RE = re.compile(r"damag|broken|crack|defect|not working|wrong item|toot", re.IGNORECASE)
